@@ -12,7 +12,7 @@ The 15-second ad set, the 30-second feature videos and the video walls stay on t
 
 ## Promo sets, one per style (24 s, music)
 
-Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, each style with its own original music bed (no voice-over). Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
+Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). No two videos share a layout: inside each style the letters run the other way, the phone scrolls the app or plays a real member clip, three phones fan out, cards swap sides, colours shift per theme and the close changes. Each style folder has a `contact-sheet.jpg` (five themes by four moments) to see the set at a glance. 1920×1080, 24 s, each style with its own original music bed (no voice-over). Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
 
 | Style | Your reference video | Files | Music |
 |---|---|---|---|

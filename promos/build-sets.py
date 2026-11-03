@@ -1,423 +1,370 @@
 #!/usr/bin/env python3
-"""Four more promo sets, one per uploaded style, five themes each, 24 s, voice-over + music.
+"""Five promo sets, one per reference style, five themes each, 24 s, no two videos laid out the same.
 
-  pixel    the portrait pixel-letter promo letterboxed on blurred sides (weight_loss_guesswork_original)
-  dark     the dark green centred headline, gold pill, receipt card, logo lockup (weight_loss_guesswork_landscape)
-  blobs    the olive / mustard / cream organic shapes with the serif headline (weight_loss_guesswork_original_2)
-  kinetic  the word-by-word gold title and the white photo card (weight_loss_guesswork_alt)
-
-Timing is shared so one voice-over fits every style:  0-5 hook · 5-12 feature · 12-18 points · 18-24 close.
+Every video is built from the same timing (0-5 hook, 5-12 feature, 12-18 points, 18-24 close) but each
+theme takes a different route through its style: letters run the other way, the phone scrolls the app
+or plays a real member clip, three phones fan out, cards swap sides, colours shift, the close changes.
 """
-import glob, math, subprocess, sys, wave
+import glob, math, subprocess, sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 sys.path.insert(0, str(Path(__file__).parent))
-from make_promos import (S, A, U, MUSIC, W, H, FPS, SAGE, GREEN, INK, DARK, DARK2, GOLD, WHITE, LOGO, ICON,
-                         inter, pix, ease, clamp01, shot_by_prefix, phone, shadowed, big_word, wordmark, pixel_text, dark_bg, icon_card_img)
+from make_promos import (S, A, U, W, H, FPS, SAGE, GREEN, INK, DARK, DARK2, GOLD, WHITE, LOGO, ICON,
+                         inter, pix, ease, clamp01, shot_by_prefix, shadowed, big_word, wordmark, pixel_text, dark_bg, icon_card_img)
+from make_sets import (THEMES, serif, receipt_card, blob, fade_layer, text_layer, centred,
+                       OLIVE, OLIVE_DARK, SAGE2, MUSTARD, CREAM, CREAM2, TOTAL, T1, T2, T3)
 
-OUT = S / 'sets'; OUT.mkdir(exist_ok=True)
-VO = S / 'vo'; VO.mkdir(exist_ok=True)
-SERIF = '/usr/share/fonts/truetype/crosextra/Caladea-{}.ttf'
-def serif(w, size): return ImageFont.truetype(SERIF.format(w), size)
-OLIVE = (90, 110, 48); OLIVE_DARK = (58, 72, 30); SAGE2 = (122, 150, 72); MUSTARD = (150, 128, 20); CREAM = (240, 232, 190); CREAM2 = (247, 242, 212)
-TOTAL = 24.0; T1, T2, T3 = 5.0, 12.0, 18.0
-
-THEMES = [
-    dict(key='tracking', big2='LOGGED', head=['Tracking,', 'minus the', 'hassle.'], gold='hassle.', big='TRACK', serif_head='Tracking,\nminus the hassle', serif_two='Snap it.\nLogged.',
-         caption='LOG A MEAL\nFROM ONE PHOTO', card='Snap it.\nLogged.', feature='Snap your meal. Logged.', sub='One photo. Calories, protein, water, counted.',
-         points=['Calories and protein from one photo', 'Water, steps, sleep and workouts', 'Your day score, 0 to 100'],
-         receipt=dict(title='Lunch, from a photo', subtitle='Chicken and avocado salad', rows=[('Calories', '520 kcal'), ('Protein', '38 g'), ('Water today', '1.2 L')],
-                      note='Barcode scanning included. No premium tier, no trial.', button='Log My First Meal Free'),
-         shots=['0bd33d40', 'fa4f4d1d', '6ac5ae12', '5a90a4c4', '97e9f9ec'], rows=('SNAP', 'LOG'),
-         vo=['Tracking, minus the hassle.', 'Log a meal from one photo. FitB works out the calories and protein.',
-             'Water, steps, sleep and workouts, all in one place, with a day score you can win.', 'Free. No paywall, no trial. Download FitB today.']),
-    dict(key='trainers', big2='BOOKED', head=['A trainer,', 'minus the', 'guesswork.'], gold='guesswork.', big='TRAINER', serif_head='A trainer,\nminus the guesswork', serif_two='Real coaches.\nReal bookings.',
-         caption='FIND A TRAINER\nAT YOUR LEVEL', card='Real coaches.\nReal bookings.', feature='Find a trainer. Booked.', sub='Verified. Prices up front. Pay in the app.',
-         points=['Verified trainers near you', 'Prices and availability up front', 'Book and pay in the app'],
-         receipt=dict(title='Trainer near you', subtitle='Maribel, strength coach, 1.2 miles', rows=[('Session', '£35'), ('Next slot', 'Tue 18:00'), ('Rating', '4.9')],
-                      note='Verified trainer. Book and pay in the app.', button='Book A Session'),
-         shots=['99adf839', 'f870b486', '8643bee3', 'a19253e4', '9e8c4203'], rows=('REAL', 'COACH'),
-         vo=['A trainer, minus the guesswork.', 'Find a verified personal trainer near you, at your level.',
-             'See prices and availability up front, then book and pay in the app.', 'Free to join. Download FitB today.']),
-    dict(key='gym', big2='CLASSES', head=['Your gym,', 'minus the', 'queue.'], gold='queue.', big='GYM', serif_head='Your gym,\nminus the queue', serif_two='Find a gym.\nFill your week.',
-         caption='CLASSES YOU CAN\nBOOK IN A TAP', card='Find a gym.\nFill your week.', feature='Pick a class. Reserved.', sub='Live timetables. One tap. Trainers at every gym.',
-         points=['Gyms by town with live timetables', 'Reserve a class in one tap', 'Trainers at every gym'],
-         receipt=dict(title='Group Fitness Class', subtitle="Tom's Health & Fitness, 07:00", rows=[('Spots left', '6'), ('Price', '£8'), ('Trainer', 'Kaleigh')],
-                      note='Live timetable. Reserve in one tap.', button='Reserve A Spot'),
-         shots=['ddf6a2a5', 'd1b71f80', '9f37e178', 'bafbad00', '1a9a571a'], rows=('BOOK', 'CLASS'),
-         vo=['Your gym, minus the queue.', 'Gyms by town, with live timetables.',
-             'Reserve a class in one tap, and meet the trainers at every gym.', 'Free to join. Download FitB today.']),
-    dict(key='recovery', big2='REST', head=['Recovery,', 'minus the', 'burnout.'], gold='burnout.', big='RECOVER', serif_head='Recovery,\nminus the burnout', serif_two='Rest is part\nof the plan.',
-         caption='SLEEP, WATER\nAND REST, TRACKED', card='Rest is part\nof the plan.', feature='Sleep, water, rest. Tracked.', sub='See how recovered you really are.',
-         points=['Sleep and recovery check-ins', 'Meditations and mobility', 'Rest days that count'],
-         receipt=dict(title='Recovery check-in', subtitle='Last night', rows=[('Sleep', '7 h 20'), ('Recovery', '72%'), ('Water', '1.8 L')],
-                      note='Rest days count. Meditations included.', button="Log Tonight's Sleep"),
-         shots=['fde66f60', '9756f970', '5a90a4c4', '8fc9efb9', 'c403f830'], rows=('REST', 'WELL'),
-         vo=['Recovery, minus the burnout.', 'Log your sleep, water and rest, and see how recovered you really are.',
-             'Meditations, mobility and rest days that count towards your plan.', 'Free. No paywall, no trial. Download FitB today.']),
-    dict(key='weight-loss', big2='TREND', head=['Weight loss,', 'minus the', 'guesswork.'], gold='guesswork.', big='WEIGHT', serif_head='Weight loss,\nminus the guesswork', serif_two='Trend,\nnot one number.',
-         caption='THE SCALE IS\nNOT THE SCORE', card='Trend,\nnot one number.', feature='Weigh in weekly. Trend, not a verdict.', sub='A weekly review moves your target in safe steps.',
-         points=['Weigh in weekly, see the trend', 'A weekly review adjusts your target', 'A buddy who checks in'],
-         receipt=dict(title='Weekly review', subtitle='Weigh-in day', rows=[('Trend', '-0.4 kg'), ('Days logged', '6 of 7'), ('Target', '1,850 kcal')],
-                      note='The scale is not the score.', button='Start My Week Free'),
-         shots=['0bd33d40', 'ef8ffbfc', 'ee64cb03', 'fa4f4d1d', '6ac5ae12'], rows=('WEIGHT', 'LOSS'),
-         vo=['Weight loss, minus the guesswork.', 'Weigh in once a week and see your trend, not one number.',
-             'A weekly review adjusts your calorie target, and a buddy checks in, so you never do it alone.', 'Free. No paywall, no trial. Download FitB today.']),
+OUT = S / 'sets2'; OUT.mkdir(exist_ok=True)
+SW, SH = 340, 720          # phone screen size every source is rendered at
+CLIPS = {'tracking': [5, 10, 40], 'trainers': [11, 4, 17], 'gym': [41, 6, 22], 'recovery': [49, 25, 2], 'weight-loss': [15, 26, 45]}
+PALETTE = [  # per theme: (dark bg, accent, light bg) so the same style never wears the same colours twice
+    ((46, 59, 38), GOLD, SAGE), ((38, 50, 44), (214, 196, 120), (223, 229, 220)), ((52, 58, 34), (236, 190, 40), (229, 230, 212)),
+    ((40, 48, 52), (190, 206, 150), (222, 230, 226)), ((44, 56, 36), GOLD, (226, 230, 214)),
 ]
 
-# ---------------- voice-over ----------------
-_voice = None
-def voice():
-    global _voice
-    if _voice is None:
-        from piper import PiperVoice
-        _voice = PiperVoice.load(glob.glob(str(S / 'voices' / '**' / 'en-gb-southern_english_female-low.onnx'), recursive=True)[0])
-    return _voice
+# ---------------- screen sources ----------------
+class Screen:
+    """What is on a phone screen at time t: a still, a scrolling app page, or a member clip."""
+    def __init__(self, kind, src, dur=6.0):
+        self.kind, self.dur = kind, dur
+        if kind in ('still', 'scroll'):
+            im = Image.open(src).convert('RGB'); w, h = im.size
+            im = im.crop((0, int(h * 0.04), w, int(h * 0.985))); im = im.resize((SW, round(SW * im.height / im.width)), Image.LANCZOS)
+            self.im = im
+        else:
+            self.paths = sorted(glob.glob(f'{S}/clipframes/{src:02d}/*.jpg')); self._cache = {}
+    def at(self, t):
+        if self.kind == 'still': return self.im.crop((0, 0, SW, SH))
+        if self.kind == 'scroll':
+            y = int((self.im.height - SH) * (0.5 - 0.5 * math.cos(math.pi * clamp01(t / self.dur)))); return self.im.crop((0, y, SW, y + SH))
+        i = int(t * FPS) % len(self.paths)
+        if i not in self._cache:
+            if len(self._cache) > 40: self._cache.clear()
+            self._cache[i] = Image.open(self.paths[i]).convert('RGB')
+        return self._cache[i]
 
-def vo_track(t):
-    """Four chunks at 0 / 5 / 12 / 18 s over the music bed; returns the mixed wav path."""
-    out = VO / f"{t['key']}.wav"
-    if out.exists(): return out
-    parts = []
-    for i, line in enumerate(t['vo']):
-        p = VO / f"{t['key']}-{i}.wav"
-        with wave.open(str(p), 'wb') as w: voice().synthesize_wav(line, w)
-        parts.append(p)
-    starts = [0.3, T1 + 0.3, T2 + 0.3, T3 + 0.3]
-    cmd = ['ffmpeg', '-v', 'error', '-y', '-i', str(MUSIC)]
-    for p in parts: cmd += ['-i', str(p)]
-    fc = f'[0:a]volume=0.16,atrim=0:{TOTAL},afade=t=out:st={TOTAL-1.5}:d=1.5[m];'
-    for i, st in enumerate(starts):
-        fc += f'[{i+1}:a]aresample=48000,aformat=channel_layouts=stereo,volume=1.6,adelay={int(st*1000)}|{int(st*1000)}[v{i}];'
-    fc += '[m]' + ''.join(f'[v{i}]' for i in range(4)) + f'amix=inputs=5:duration=first:normalize=0,alimiter=limit=0.95[a]'
-    subprocess.run(cmd + ['-filter_complex', fc, '-map', '[a]', '-ar', '48000', str(out)], check=True)
-    return out
+def phone_img(screen_im, scale=1.0):
+    bez = 14; r = 50
+    ph = Image.new('RGBA', (SW + 2 * bez, SH + 2 * bez), (0, 0, 0, 0))
+    ImageDraw.Draw(ph).rounded_rectangle([0, 0, ph.width - 1, ph.height - 1], radius=r, fill=(24, 26, 20, 255))
+    mask = Image.new('L', (SW, SH), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, SW - 1, SH - 1], radius=36, fill=255)
+    ph.paste(screen_im, (bez, bez), mask)
+    ImageDraw.Draw(ph).rounded_rectangle([SW // 2 - 40 + bez, bez + 10, SW // 2 + 40 + bez, bez + 30], radius=10, fill=(24, 26, 20, 255))
+    if scale != 1.0: ph = ph.resize((int(ph.width * scale), int(ph.height * scale)), Image.LANCZOS)
+    return ph
 
-def music_only():
-    out = VO / 'music-24.wav'
-    if not out.exists():
-        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(MUSIC), '-af', 'atrim=0:24,afade=t=in:st=0:d=0.5,afade=t=out:st=22.5:d=1.5', '-ar', '48000', str(out)], check=True)
-    return out
-
-# ---------------- shared bits ----------------
-def fade_layer(fr, layer, a):
-    if a <= 0: return
-    if a < 1: layer.putalpha(layer.split()[3].point(lambda v: int(v * a)))
-    fr.alpha_composite(layer)
-
-def text_layer(txt, font, colour, x, y, a=1.0):
-    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(layer).text((x, y), txt, font=font, fill=colour + (int(255 * a),))
+def fan(screens, t, scale=0.72):
+    """Three phones fanned out, the middle one forward."""
+    layer = Image.new('RGBA', (1100, 900), (0, 0, 0, 0))
+    for i, (sc, ang, dx, dy) in enumerate(zip(screens, (-14, 0, 14), (-250, 0, 250), (60, 0, 60))):
+        ph = phone_img(sc.at(t), scale).rotate(ang, expand=True, resample=Image.BICUBIC)
+        layer.alpha_composite(shadowed(ph, blur=20, alpha=100), (550 - ph.width // 2 + dx - 60, 40 + dy))
     return layer
 
-def centred(fr, txt, font, colour, y, a=1.0):
-    tw = font.getlength(txt); fr.alpha_composite(text_layer(txt, font, colour, (W - tw) / 2, y, a))
+def white_card(inner, w, h, bg=(247, 248, 243), radius=16):
+    c = Image.new('RGBA', (w, h), bg + (255,))
+    lg = LOGO.resize((round(LOGO.width * 46 / LOGO.height), 46), Image.LANCZOS); c.alpha_composite(lg, (34, 30))
+    c.alpha_composite(inner, ((w - inner.width) // 2, (h - inner.height) // 2 + 30))
+    mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
+    out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); out.paste(c, (0, 0), mask)
+    return shadowed(out, blur=24, alpha=80)
 
-def receipt_card(r, scale=1.0):
-    """The white 'receipt' card from the dark promo: title, subtitle, three rows, note, green button."""
-    cw, ch = 690, 640
-    c = Image.new('RGBA', (cw, ch), (255, 255, 255, 255)); d = ImageDraw.Draw(c)
-    d.text((34, 34), r['title'], font=inter('SemiBold', 30), fill=(30, 30, 30))
-    d.rounded_rectangle([cw - 150, 36, cw - 34, 72], radius=6, outline=(205, 205, 200), width=2)
-    d.text((cw - 136, 44), 'EXAMPLE', font=inter('Medium', 17), fill=(110, 110, 105))
-    d.text((34, 84), r['subtitle'], font=inter('Regular', 24), fill=(120, 120, 115))
-    y = 140
-    for label, val in r['rows']:
-        d.rounded_rectangle([34, y, cw - 34, y + 70], radius=10, fill=(243, 244, 240))
-        d.ellipse([54, y + 27, 70, y + 43], fill=GREEN)
-        d.text((88, y + 20), label, font=inter('Medium', 26), fill=(40, 40, 40))
-        d.text((cw - 50 - inter('SemiBold', 24).getlength(val), y + 22), val, font=inter('SemiBold', 24), fill=(30, 30, 30))
-        y += 84
-    d.rounded_rectangle([34, y, cw - 34, y + 84], radius=10, fill=(243, 244, 240), outline=(220, 222, 215))
-    d.text((56, y + 28), r['note'], font=inter('Regular', 22), fill=(70, 70, 65))
-    y += 104
-    d.rounded_rectangle([34, y, cw - 34, y + 60], radius=8, fill=(84, 112, 44))
-    bt = inter('SemiBold', 26); d.text(((cw - bt.getlength(r['button'])) / 2, y + 14), r['button'], font=bt, fill=WHITE)
-    mask = Image.new('L', (cw, ch), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=22, fill=255)
-    out = Image.new('RGBA', (cw, ch), (0, 0, 0, 0)); out.paste(c, (0, 0), mask)
-    if scale != 1.0: out = out.resize((int(cw * scale), int(ch * scale)), Image.LANCZOS)
-    return shadowed(out, alpha=120)
-
-def photo_card(shot):
-    """White card: soft sage kitchen-ish backdrop, FitB wordmark, a tilted phone with the app screen."""
-    cw, ch = 920, 560
-    bg = Image.new('RGBA', (cw, ch), (236, 238, 230, 255))
-    g = Image.new('RGBA', (cw, ch), (0, 0, 0, 0)); gd = ImageDraw.Draw(g)
-    gd.ellipse([cw * 0.55, -ch * 0.2, cw * 1.3, ch * 0.9], fill=(190, 204, 160, 255))
-    gd.ellipse([-cw * 0.2, ch * 0.5, cw * 0.5, ch * 1.3], fill=(220, 226, 205, 255))
-    g = g.filter(ImageFilter.GaussianBlur(70)); bg.alpha_composite(g)
+def photo_bg(w, h, tint):
+    bg = Image.new('RGBA', (w, h), (236, 238, 230, 255))
+    g = Image.new('RGBA', (w, h), (0, 0, 0, 0)); gd = ImageDraw.Draw(g)
+    gd.ellipse([w * 0.55, -h * 0.2, w * 1.3, h * 0.9], fill=tint + (255,)); gd.ellipse([-w * 0.2, h * 0.5, w * 0.5, h * 1.3], fill=(220, 226, 205, 255))
+    bg.alpha_composite(g.filter(ImageFilter.GaussianBlur(70)))
     lg = LOGO.resize((round(LOGO.width * 56 / LOGO.height), 56), Image.LANCZOS); bg.alpha_composite(lg, (36, 32))
-    ph = phone(shot, 470).rotate(-8, expand=True, resample=Image.BICUBIC)
-    bg.alpha_composite(shadowed(ph, blur=22, alpha=120), (cw // 2 - 60, 30))
-    mask = Image.new('L', (cw, ch), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, cw - 1, ch - 1], radius=26, fill=255)
-    out = Image.new('RGBA', (cw, ch), (0, 0, 0, 0)); out.paste(bg, (0, 0), mask)
+    return bg
+
+def photo_card(screen, t, w=920, h=560, tilt=-8, tint=(190, 204, 160)):
+    bg = photo_bg(w, h, tint)
+    ph = phone_img(screen.at(t), 0.62).rotate(tilt, expand=True, resample=Image.BICUBIC)
+    bg.alpha_composite(shadowed(ph, blur=22, alpha=120), (w // 2 - 40, 20))
+    mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=26, fill=255)
+    out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); out.paste(bg, (0, 0), mask)
     return shadowed(out, alpha=130)
 
-def blob(size, colour, seed=1, spikes=0, wobble=0.12):
-    """Organic blob (or a starburst when spikes > 0) as an RGBA image."""
-    import random
-    rnd = random.Random(seed); w, h = size
-    pts = []; n = 180
-    phases = [rnd.random() * 6.28 for _ in range(4)]
-    for i in range(n):
-        a = 2 * math.pi * i / n
-        r = 1 + wobble * (math.sin(2 * a + phases[0]) * 0.6 + math.sin(3 * a + phases[1]) * 0.4 + math.sin(5 * a + phases[2]) * 0.25)
-        if spikes: r *= 1 + 0.12 * math.cos(spikes * a)
-        pts.append((w / 2 + math.cos(a) * r * w / 2 * 0.86, h / 2 + math.sin(a) * r * h / 2 * 0.86))
-    im = Image.new('RGBA', size, (0, 0, 0, 0)); ImageDraw.Draw(im).polygon(pts, fill=colour + (255,))
-    return im
-
-# ---------------- style: pixel (video 1: portrait page on blurred sides) ----------------
-PW, PH = 1080, 1920
-def product_card(shot, w=620, h=900):
-    """White card with the phone standing on it, soft shadow, like the first product shot in video 1."""
-    c = Image.new('RGBA', (w, h), (247, 248, 243, 255))
-    lg = LOGO.resize((round(LOGO.width * 48 / LOGO.height), 48), Image.LANCZOS); c.alpha_composite(lg, (36, 32))
-    ph = phone(shot, 620)
-    c.alpha_composite(shadowed(ph, blur=30, off=(0, 26), alpha=120), ((w - ph.width) // 2 - 90, 120))
-    mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=14, fill=255)
+def dark_card(title, screen, t, w=560, h=760, bg=DARK2):
+    c = Image.new('RGBA', (w, h), bg + (255,)); d = ImageDraw.Draw(c)
+    lg = LOGO.resize((round(LOGO.width * 44 / LOGO.height), 44), Image.LANCZOS); c.alpha_composite(lg, (36, 32))
+    f = inter('Bold', 44); y = 110
+    for line in title.split('\n'): d.text((36, y), line, font=f, fill=WHITE); y += 52
+    ph = phone_img(screen.at(t), 0.66); c.alpha_composite(ph, ((w - ph.width) // 2, h - ph.height + 70))
+    mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=28, fill=255)
     out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); out.paste(c, (0, 0), mask)
-    return shadowed(out, blur=24, alpha=70)
+    return shadowed(out)
 
-def pixel_portrait(t, tt, rows, free, pcard, phone_big, photo, icon, wm):
-    fr = Image.new('RGBA', (PW, PH), SAGE + (255,))
-    cap = '\n'.join(l.upper() for l in t['head'])
+def points_block(points, t, t0, font, colour, x, y0, gap, marker='tick', accent=GREEN, step=1.6):
+    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(layer)
+    for i, pt in enumerate(points):
+        a = ease((t - t0 - i * step) / 0.5)
+        if a <= 0: continue
+        y = y0 + i * gap + int((1 - a) * 24); al = int(255 * a)
+        if marker == 'tick':
+            d.rounded_rectangle([x, y + 6, x + 42, y + 48], radius=10, fill=accent + (al,)); d.line([(x + 11, y + 28), (x + 20, y + 37), (x + 33, y + 17)], fill=WHITE + (al,), width=5)
+            d.text((x + 64, y), pt, font=font, fill=colour + (al,))
+        elif marker == 'num':
+            d.text((x, y), f'0{i + 1}', font=font, fill=accent + (al,)); d.text((x + 90, y), pt, font=font, fill=colour + (al,))
+        else:
+            d.text((x, y), ('> ' if marker == 'pix' else '— ') + (pt.upper() if marker == 'pix' else pt), font=font, fill=colour + (al,))
+    return layer
+
+def close_scene(t, tt, variant, bg_col, fg, accent, icon):
+    fr = Image.new('RGBA', (W, H), bg_col + (255,))
+    a = ease(tt / 0.6)
+    if variant == 0:
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(icon, ((W - icon.width) // 2, 180 + int((1 - a) * 40))); fade_layer(fr, layer, a)
+        for i, (txt, font, col) in enumerate([('Free. No paywall, no trial.', inter('Bold', 92), fg), ('fitb.social', inter('Medium', 54), accent)]):
+            la = ease((tt - 0.6 - i * 0.5) / 0.5)
+            if la > 0: centred(fr, txt, font, col, 600 + i * 120 + int((1 - la) * 30), la)
+    elif variant == 1:
+        lock = Image.new('RGBA', (620, 170), (0, 0, 0, 0)); ic = ICON.resize((150, round(150 * ICON.height / ICON.width)), Image.LANCZOS)
+        card = Image.new('RGBA', (170, 170), (0, 0, 0, 0)); ImageDraw.Draw(card).rounded_rectangle([0, 0, 169, 169], radius=36, fill=(255, 255, 255, 255)); card.alpha_composite(ic, (10, 10))
+        lock.alpha_composite(card, (0, 0)); ImageDraw.Draw(lock).text((200, 18), 'FitB', font=inter('Bold', 120), fill=fg)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(lock, ((W - lock.width) // 2 + 40, 330 + int((1 - a) * 30))); fade_layer(fr, layer, a)
+        b = ease((tt - 0.5) / 0.5)
+        if b > 0:
+            centred(fr, ' '.join(t['head']), inter('SemiBold', 56), fg, 560, b); centred(fr, 'Free on iPhone and Android.', inter('SemiBold', 46), accent, 650, b)
+    else:
+        big = big_word('FITB'); soft = big.copy(); soft.putalpha(soft.split()[3].point(lambda v: int(v * 0.9 * a)))
+        fr.alpha_composite(soft, ((W - big.width) // 2, (H - big.height) // 2 - 120))
+        b = ease((tt - 0.5) / 0.5)
+        if b > 0:
+            l1 = pixel_text('FREE. NO PAYWALL, NO TRIAL.', 56, fg); l2 = pixel_text('FITB.SOCIAL', 46, accent)
+            la = Image.new('RGBA', (W, H), (0, 0, 0, 0)); la.alpha_composite(l1, ((W - l1.width) // 2, 760)); la.alpha_composite(l2, ((W - l2.width) // 2, 850)); fade_layer(fr, la, b)
+    return fr
+
+# ================= style 1: plans (landscape pixel page) =================
+def plans(t, v, tt, X):
+    bgc, acc, light = PALETTE[v]; fr = Image.new('RGBA', (W, H), light + (255,))
+    ltr = 1 if v % 2 == 0 else -1  # letters run right-to-left on even themes, left-to-right on odd
     if tt < T1:
-        # two stacked rows of giant letters slide in at different speeds
-        x1 = PW + 40 - (PW + rows[0].width + 200) * ease(tt / 4.6)
-        x2 = PW + 300 - (PW + rows[1].width + 300) * ease(tt / 5.2)
+        p = tt / T1; x = (W + 40 - (W + X['big'].width + 80) * p) if ltr > 0 else (-X['big'].width - 40 + (W + X['big'].width + 80) * p)
+        fr.alpha_composite(X['big'], (int(x), (H - X['big'].height) // 2 + (0 if v % 3 else -120)))
+        if v % 3 == 2:  # some themes get the caption typed already in the hook
+            n = int(clamp01((tt - 1.0) / 1.5) * len(t['caption'])); fr.alpha_composite(pixel_text(t['caption'][:n], 60, INK), (130, 760))
+    elif tt < T2:
+        x = W * 0.1 - (tt - T1) / 7 * X['big2'].width * 0.45; fr.alpha_composite(X['big2'], (int(x), H - X['big2'].height + 200))
+        a = ease((tt - T1) / 0.7); layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        if v % 3 == 0:   # dark card, phone scrolling the app
+            c = dark_card(t['card'], X['scr'][0], tt - T1); layer.alpha_composite(c, ((W - c.width) // 2, (H - c.height) // 2 + int((1 - a) * 80)))
+        elif v % 3 == 1: # three phones fanned, member clip in the middle
+            f3 = fan([X['scr'][1], X['clip'][0], X['scr'][2]], tt - T1); layer.alpha_composite(f3, ((W - f3.width) // 2, 80 + int((1 - a) * 80)))
+        else:            # white product card with a clip playing, off to the right
+            ph = phone_img(X['clip'][0].at(tt - T1), 0.8); c = white_card(ph, 560, 820); layer.alpha_composite(c, (W - c.width - 120, (H - c.height) // 2 + int((1 - a) * 80)))
+            fr.alpha_composite(pixel_text(t['big'] + '\n' + t['rows'][1], 110, INK), (120, 300))
+        fade_layer(fr, layer, a)
+    elif tt < T3:
+        x = -X['big'].width * 0.35 - (tt - T2) / 6 * X['big'].width * 0.25
+        soft = X['big'].copy(); soft.putalpha(soft.split()[3].point(lambda q: q * 55 // 100)); fr.alpha_composite(soft, (int(x), H - X['big'].height + 260))
+        n = int(clamp01((tt - T2 - 0.1) / 1.2) * len(t['caption']))
+        side_right = v % 2 == 0
+        cx = 130 if side_right else W - 820
+        if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 60, INK), (cx, 190))
+        fr.alpha_composite(points_block(t['points'], tt, T2 + 1.4, pix(38), INK, cx, 420, 64, marker='pix', step=1.2))
+        a = ease((tt - T2) / 0.7); layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        pc = photo_card(X['clip'][1] if v % 2 else X['scr'][1], tt - T2, tilt=-8 if v % 2 else 6, tint=acc if v % 2 else (190, 204, 160))
+        px = (W - pc.width - 60 + int((1 - a) * 120)) if side_right else (60 - int((1 - a) * 120))
+        layer.alpha_composite(pc, (px, (H - pc.height) // 2 + 20)); fade_layer(fr, layer, a)
+    else:
+        return close_scene(t, tt - T3, [2, 0, 1, 2, 0][v], light, INK, GREEN, X['icon'])
+    fr.alpha_composite(X['wm'], (W - X['wm'].width - 110, 90)); return fr
+
+# ================= style 2: pixel (video 1: portrait page on blurred sides) =================
+PW, PH = 1080, 1920
+def pixel(t, v, tt, X):
+    bgc, acc, light = PALETTE[v]; fr = Image.new('RGBA', (PW, PH), light + (255,))
+    cap = '\n'.join(l.upper() for l in t['head']); rows = X['rows']
+    if tt < T1:
+        d1 = 1 if v % 2 == 0 else -1
+        p1, p2 = ease(tt / 4.6), ease(tt / 5.2)
+        x1 = (PW + 40 - (PW + rows[0].width + 200) * p1) if d1 > 0 else (-rows[0].width + (PW + rows[0].width + 200) * p1)
+        x2 = (PW + 300 - (PW + rows[1].width + 300) * p2) if d1 > 0 else (-rows[1].width - 300 + (PW + rows[1].width + 300) * p2)
         fr.alpha_composite(rows[0], (int(x1), 120)); fr.alpha_composite(rows[1], (int(x2), 1080))
         n = int(clamp01((tt - 0.8) / 1.6) * len(cap))
-        if cap[:n].strip():
-            txt = pixel_text(cap[:n], 58, INK); fr.alpha_composite(txt, (120, 700))
+        if cap[:n].strip(): fr.alpha_composite(pixel_text(cap[:n], 58, INK), (120, 700 if v % 2 == 0 else 480))
     elif tt < 10.0:
-        k = ease((tt - T1) / 0.6)
-        # caption shrinks up to the top-left, the product card lands, the FREE row passes above
-        small = pixel_text(cap, int(58 - 22 * k), INK)
-        fr.alpha_composite(small, (int(120 - 20 * k), int(700 - 560 * k)))
-        x = PW * 0.4 - (tt - T1) / 5.0 * (free.width + PW)
-        fr.alpha_composite(free, (int(x), 1180))
-        a = ease((tt - T1 - 0.2) / 0.6)
-        layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); layer.alpha_composite(pcard, ((PW - pcard.width) // 2, 440 + int((1 - a) * 80))); fade_layer(fr, layer, a)
+        k = ease((tt - T1) / 0.6); small = pixel_text(cap, int(58 - 22 * k), INK); fr.alpha_composite(small, (int(120 - 20 * k), int(700 - 560 * k)))
+        x = PW * 0.4 - (tt - T1) / 5.0 * (X['free'].width + PW); fr.alpha_composite(X['free'], (int(x), 1180))
+        a = ease((tt - T1 - 0.2) / 0.6); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
+        src = X['clip'][0] if v % 2 else X['scr'][0]
+        if v % 3 == 1: c = fan([X['scr'][1], src, X['scr'][2]], tt - T1, 0.62); layer.alpha_composite(c, ((PW - c.width) // 2, 500 + int((1 - a) * 80)))
+        else: c = white_card(phone_img(src.at(tt - T1), 0.85), 620, 900); layer.alpha_composite(c, ((PW - c.width) // 2, 440 + int((1 - a) * 80)))
+        fade_layer(fr, layer, a)
     elif tt < 14.0:
-        # zoom into the phone screen
-        z = ease((tt - 10.0) / 1.6); sc = 1.0 + 1.9 * z
-        pb = phone_big.resize((int(phone_big.width * sc), int(phone_big.height * sc)), Image.BILINEAR)
-        fr.alpha_composite(pb, ((PW - pb.width) // 2, int(520 - z * 900)))
-        x = PW * 0.4 - (tt - T1) / 5.0 * (free.width + PW); fr.alpha_composite(free, (int(x), 1180))
+        z = ease((tt - 10.0) / 1.6); sc = 0.85 + 1.9 * z; src = X['clip'][0] if v % 2 else X['scr'][0]
+        pb = phone_img(src.at(tt - T1), sc); fr.alpha_composite(pb, ((PW - pb.width) // 2, int(520 - z * 900)))
+        x = PW * 0.4 - (tt - T1) / 5.0 * (X['free'].width + PW); fr.alpha_composite(X['free'], (int(x), 1180))
     elif tt < 19.0:
-        x = -rows[1].width * 0.25 - (tt - 14.0) / 5.0 * rows[1].width * 0.35
-        fr.alpha_composite(rows[1], (int(x), -260))
-        a = ease((tt - 14.0) / 0.6)
-        layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); layer.alpha_composite(photo, ((PW - photo.width) // 2, 560 + int((1 - a) * 60))); fade_layer(fr, layer, a)
+        x = -rows[1].width * 0.25 - (tt - 14.0) / 5.0 * rows[1].width * 0.35; fr.alpha_composite(rows[1], (int(x), -260))
+        a = ease((tt - 14.0) / 0.6); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
+        pc = photo_card(X['clip'][1] if v % 2 == 0 else X['scr'][1], tt - 14, w=900, h=540, tilt=-8 if v % 2 else 7, tint=acc)
+        pc = pc.resize((int(pc.width * 0.78), int(pc.height * 0.78)), Image.LANCZOS)
+        layer.alpha_composite(pc, ((PW - pc.width) // 2, 560 + int((1 - a) * 60))); fade_layer(fr, layer, a)
         n = int(clamp01((tt - 14.6) / 1.4) * len(t['caption']))
         if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 62, INK), (120, 1280))
         for i, pt in enumerate(t['points']):
             pa = ease((tt - 16.2 - i * 0.8) / 0.4)
-            if pa <= 0: continue
-            fr.alpha_composite(pixel_text('> ' + pt.upper(), 30, INK), (120, 1480 + i * 70))
+            if pa > 0: fr.alpha_composite(pixel_text('> ' + pt.upper(), 30, INK), (120, 1480 + i * 70))
     else:
         a = ease((tt - 19.0) / 0.6); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
-        layer.alpha_composite(icon, ((PW - icon.width) // 2, 700 + int((1 - a) * 60))); fade_layer(fr, layer, a)
+        layer.alpha_composite(X['icon'], ((PW - X['icon'].width) // 2, 700 + int((1 - a) * 60))); fade_layer(fr, layer, a)
         b = ease((tt - 19.8) / 0.5)
         if b > 0:
             l1 = pixel_text('FREE. NO PAYWALL.', 52, INK); l2 = pixel_text('FITB.SOCIAL', 44, GREEN)
             la = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); la.alpha_composite(l1, ((PW - l1.width) // 2, 1120)); la.alpha_composite(l2, ((PW - l2.width) // 2, 1200)); fade_layer(fr, la, b)
-    fr.alpha_composite(wm, (PW - wm.width - 70, 70))
+    fr.alpha_composite(X['wm'], (PW - X['wm'].width - 70, 70))
     small = fr.resize((480, 270), Image.BILINEAR).filter(ImageFilter.GaussianBlur(6)).resize((W, H), Image.BICUBIC)
-    port = fr.resize((608, 1080), Image.LANCZOS)
-    small.alpha_composite(port, ((W - 608) // 2, 0))
-    return small
+    small.alpha_composite(fr.resize((608, 1080), Image.LANCZOS), ((W - 608) // 2, 0)); return small
 
-def photo_card_small(shot):
-    pc = photo_card(shot); return pc.resize((int(pc.width * 0.72), int(pc.height * 0.72)), Image.LANCZOS)
-
-# ---------------- style: dark centred + receipt ----------------
-def dark_centred(t, tt, bg, card, icon):
-    fr = bg.copy(); f = inter('Bold', 92); fp = inter('Bold', 72)
+# ================= style 3: dark centred (receipt card) =================
+def dark(t, v, tt, X):
+    bgc, acc, light = PALETTE[v]; fr = X['bg'].copy(); f = inter('Bold', 92); fp = inter('Bold', 72)
+    left = v % 2 == 1  # odd themes: everything left-aligned with the card on the right
+    def put(txt, font, col, y, a=1.0):
+        if left: fr.alpha_composite(text_layer(txt, font, col, 120, y, a))
+        else: centred(fr, txt, font, col, y, a)
     if tt < T1:
         a = ease(tt / 0.5)
-        centred(fr, t['head'][0] + ' ' + t['head'][1], f, WHITE, 300 + int((1 - a) * 30), a)
-        centred(fr, t['head'][2], f, WHITE, 410 + int((1 - a) * 30), a)
+        put(t['head'][0] + ' ' + t['head'][1], f, WHITE, 300 + int((1 - a) * 30), a); put(t['head'][2], f, WHITE, 410 + int((1 - a) * 30), a)
         b = ease((tt - 0.9) / 0.4)
         if b > 0:
-            txt = "And it's FREE."; tw = fp.getlength(txt); sc = 0.6 + 0.4 * b
-            pw, ph_ = int((tw + 70) * sc), int(110 * sc)
-            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(layer)
-            d.rounded_rectangle([(W - pw) / 2, 600 - ph_ / 2, (W + pw) / 2, 600 + ph_ / 2], radius=14, fill=GOLD + (int(255 * b),))
-            fr.alpha_composite(layer)
-            if b > 0.85: centred(fr, txt, fp, DARK2, 600 - 44)
+            txt = "And it's FREE."; tw = fp.getlength(txt); sc = 0.6 + 0.4 * b; pw, ph_ = int((tw + 70) * sc), int(110 * sc)
+            cx = 120 + (tw + 70) / 2 if left else W / 2
+            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); ImageDraw.Draw(layer).rounded_rectangle([cx - pw / 2, 600 - ph_ / 2, cx + pw / 2, 600 + ph_ / 2], radius=14, fill=acc + (int(255 * b),)); fr.alpha_composite(layer)
+            if b > 0.85: fr.alpha_composite(text_layer(txt, fp, DARK2, cx - tw / 2, 556))
+        if v % 2 == 0:  # a phone with a clip fades in behind the centred title on even themes
+            c = ease((tt - 1.8) / 0.8)
+            if c > 0:
+                ph = phone_img(X['clip'][0].at(tt), 0.5); layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(ph, (W - ph.width - 140, 640 + int((1 - c) * 40))); fade_layer(fr, layer, c * 0.95)
     elif tt < T3:
-        a = ease((tt - T1) / 0.6); sc = 0.9 + 0.1 * a
-        c = card if sc == 1 else card.resize((int(card.width * sc), int(card.height * sc)), Image.LANCZOS)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(c, ((W - c.width) // 2, 40 + int((1 - a) * 40))); fade_layer(fr, layer, a)
-        b = ease((tt - T1 - 0.5) / 0.5)
-        if b > 0:
-            centred(fr, t['feature'], inter('Bold', 76), WHITE, 800, b)
-            centred(fr, t['sub'], inter('Medium', 40), GOLD, 900, b)
-        if tt > T2:
-            # points slide in under the sub line
-            for i, pt in enumerate(t['points']):
-                pa = ease((tt - T2 - i * 1.5) / 0.5)
-                if pa <= 0: continue
-                centred(fr, '·  ' + pt + '  ·', inter('Medium', 34), WHITE, 960 + int((1 - pa) * 20), pa)
-                break  # one at a time, the latest replaces the previous
+        a = ease((tt - T1) / 0.6); card = X['card']
+        if left:
+            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(card, (W - card.width - 100, (H - card.height) // 2 + int((1 - a) * 40))); fade_layer(fr, layer, a)
+            b = ease((tt - T1 - 0.5) / 0.5)
+            if b > 0: put(t['feature'], inter('Bold', 70), WHITE, 300, b); put(t['sub'], inter('Medium', 38), acc, 400, b)
+            if tt > T2: fr.alpha_composite(points_block(t['points'], tt, T2, inter('Medium', 38), WHITE, 120, 520, 90, marker='num', accent=acc, step=1.5))
+        else:
+            sc = 0.9 + 0.1 * a; c = card.resize((int(card.width * sc), int(card.height * sc)), Image.LANCZOS)
+            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(c, ((W - c.width) // 2 - (220 if tt > T2 else 0), 40 + int((1 - a) * 40))); fade_layer(fr, layer, a)
+            b = ease((tt - T1 - 0.5) / 0.5)
+            if b > 0 and tt <= T2: centred(fr, t['feature'], inter('Bold', 76), WHITE, 800, b); centred(fr, t['sub'], inter('Medium', 40), acc, 900, b)
+            if tt > T2:  # the card slides left and a clip phone joins it on the right, points under
+                c2 = ease((tt - T2) / 0.6); ph = phone_img(X['clip'][1].at(tt - T2), 0.72)
+                layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(shadowed(ph, blur=20, alpha=120), (W // 2 + 180 + int((1 - c2) * 200), 40)); fade_layer(fr, layer, c2)
+                fr.alpha_composite(points_block(t['points'], tt, T2 + 0.4, inter('Medium', 36), WHITE, 420, 820, 70, marker='dash', accent=acc, step=1.4))
     else:
-        a = ease((tt - T3) / 0.6)
-        lock = Image.new('RGBA', (560, 160), (0, 0, 0, 0))
-        ic = ICON.resize((140, round(140 * ICON.height / ICON.width)), Image.LANCZOS)
-        card_ic = Image.new('RGBA', (160, 160), (0, 0, 0, 0)); ImageDraw.Draw(card_ic).rounded_rectangle([0, 0, 159, 159], radius=34, fill=(66, 84, 48, 255))
-        card_ic.alpha_composite(ic, (10, 10)); lock.alpha_composite(card_ic, (0, 0))
-        ImageDraw.Draw(lock).text((190, 20), 'FitB', font=inter('Bold', 110), fill=WHITE)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(lock, ((W - lock.width) // 2 + 60, 380 + int((1 - a) * 30))); fade_layer(fr, layer, a)
-        b = ease((tt - T3 - 0.5) / 0.5)
-        if b > 0:
-            centred(fr, ' '.join(t['head']), inter('SemiBold', 52), WHITE, 600, b)
-            centred(fr, 'Free on iPhone and Android.', inter('SemiBold', 46), GOLD, 680, b)
+        return close_scene(t, tt - T3, [1, 0, 1, 2, 1][v], bgc, WHITE, acc, X['icon'])
     return fr
 
-# ---------------- style: blobs + serif ----------------
-def blobs_style(t, tt, pcard, icon_small, star, blob_m, blob_c, cloud):
-    fs = serif('Bold', 120)
+# ================= style 4: blobs (serif, organic shapes) =================
+def blobs(t, v, tt, X):
+    bgc, acc, light = PALETTE[v]; fs = serif('Bold', 120)
+    pal = [(OLIVE, SAGE2, OLIVE_DARK, MUSTARD, CREAM), ((60, 84, 60), (120, 160, 110), (40, 60, 44), (210, 170, 60), (244, 236, 210)),
+           ((96, 100, 40), (160, 170, 90), (64, 68, 28), (230, 190, 50), (238, 232, 200)), ((70, 80, 90), (140, 160, 150), (50, 60, 70), (200, 180, 90), (236, 236, 224)), (OLIVE, SAGE2, OLIVE_DARK, MUSTARD, CREAM)][v]
+    c_bg, c_star, c_dark, c_must, c_cream = pal
     if tt < T1:
-        fr = Image.new('RGBA', (W, H), OLIVE + (255,))
-        a = ease(tt / 0.6); sc = 0.7 + 0.3 * a
-        st = star.resize((int(star.width * sc), int(star.height * sc)), Image.LANCZOS)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(st, ((W - st.width) // 2, (H - st.height) // 2)); fade_layer(fr, layer, a)
+        fr = Image.new('RGBA', (W, H), c_bg + (255,)); a = ease(tt / 0.6); sc = 0.7 + 0.3 * a
+        st = X['star'].resize((int(X['star'].width * sc), int(X['star'].height * sc)), Image.LANCZOS)
+        pos = ((W - st.width) // 2, (H - st.height) // 2) if v % 2 == 0 else (W - st.width - 80, (H - st.height) // 2)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(st, pos); fade_layer(fr, layer, a)
         b = ease((tt - 0.4) / 0.5)
         if b > 0:
             lines = t['serif_head'].split('\n')
-            for i, l in enumerate(lines): centred(fr, l, fs, CREAM2, (H - 140 * len(lines)) // 2 + i * 140, b)
+            for i, l in enumerate(lines):
+                if v % 2 == 0: centred(fr, l, fs, CREAM2, (H - 140 * len(lines)) // 2 + i * 140, b)
+                else: fr.alpha_composite(text_layer(l, fs, CREAM2, 120, (H - 140 * len(lines)) // 2 + i * 140, b))
     elif tt < T3:
-        fr = Image.new('RGBA', (W, H), OLIVE_DARK + (255,))
-        a = ease((tt - T1) / 0.7)
-        bl = blob_m.resize((int(blob_m.width * (0.8 + 0.2 * a)), int(blob_m.height * (0.8 + 0.2 * a))), Image.LANCZOS)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(bl, (W - bl.width + 120, H - bl.height + 160)); fade_layer(fr, layer, a)
-        b = ease((tt - T1 - 0.3) / 0.6)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(pcard, (W - pcard.width - 60 + int((1 - b) * 60), 120)); fade_layer(fr, layer, b)
-        if tt > T2:
-            for i, pt in enumerate(t['points']):
-                pa = ease((tt - T2 - i * 1.6) / 0.5)
-                if pa <= 0: continue
-                fr.alpha_composite(text_layer(pt, serif('Bold', 42), CREAM2, 100, 340 + i * 110, pa))
+        fr = Image.new('RGBA', (W, H), c_dark + (255,)); a = ease((tt - T1) / 0.7)
+        bl = X['blob'].resize((int(X['blob'].width * (0.8 + 0.2 * a)), int(X['blob'].height * (0.8 + 0.2 * a))), Image.LANCZOS)
+        right = v % 2 == 0
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(bl, (W - bl.width + 120, H - bl.height + 160) if right else (-120, H - bl.height + 160)); fade_layer(fr, layer, a)
+        b = ease((tt - T1 - 0.3) / 0.6); layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        if v % 3 == 0: pc = photo_card(X['clip'][0], tt - T1, tilt=-8, tint=(220, 200, 120))
+        elif v % 3 == 1: pc = fan([X['scr'][0], X['clip'][0], X['scr'][1]], tt - T1, 0.66)
+        else: pc = white_card(phone_img(X['scr'][0].at(tt - T1) if tt < T2 else X['clip'][1].at(tt - T2), 0.78), 560, 760, bg=c_cream)
+        layer.alpha_composite(pc, (W - pc.width - 60 + int((1 - b) * 60), (H - pc.height) // 2) if right else (60 - int((1 - b) * 60), (H - pc.height) // 2)); fade_layer(fr, layer, b)
+        tx = 120 if right else W - 760
+        if tt > T2: fr.alpha_composite(points_block(t['points'], tt, T2, serif('Bold', 36), CREAM2, tx, 340, 100, marker='num', accent=c_must))
         else:
             c = ease((tt - T1 - 0.8) / 0.5)
             if c > 0:
-                for i, l in enumerate(t['serif_two'].split('\n')): fr.alpha_composite(text_layer(l, serif('Bold', 96), CREAM2, 120, 330 + i * 115, c))
+                for i, l in enumerate(t['serif_two'].split('\n')): fr.alpha_composite(text_layer(l, serif('Bold', 96), CREAM2, tx, 330 + i * 115, c))
     else:
-        fr = Image.new('RGBA', (W, H), CREAM + (255,))
-        a = ease((tt - T3) / 0.7)
-        cl = cloud.resize((int(cloud.width * (0.85 + 0.15 * a)), int(cloud.height * (0.85 + 0.15 * a))), Image.LANCZOS)
+        fr = Image.new('RGBA', (W, H), c_cream + (255,)); a = ease((tt - T3) / 0.7)
+        cl = X['cloud'].resize((int(X['cloud'].width * (0.85 + 0.15 * a)), int(X['cloud'].height * (0.85 + 0.15 * a))), Image.LANCZOS)
         layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(cl, ((W - cl.width) // 2, (H - cl.height) // 2 + 40)); fade_layer(fr, layer, a)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(icon_small, ((W - icon_small.width) // 2, 560)); fade_layer(fr, layer, a)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(X['icon_small'], ((W - X['icon_small'].width) // 2, 560)); fade_layer(fr, layer, a)
         b = ease((tt - T3 - 0.5) / 0.5)
         if b > 0:
-            centred(fr, 'FitB', serif('Bold', 140), MUSTARD, 300, b)
-            centred(fr, 'Free. No paywall, no trial.  ·  fitb.social', serif('Bold', 48), OLIVE_DARK, 820, b)
+            centred(fr, 'FitB', serif('Bold', 140), c_must, 300, b)
+            centred(fr, ['Free. No paywall, no trial.', 'Free on iPhone and Android.', 'Download free today.', 'Start free, today.', 'Free. Every size welcome.'][v] + '  ·  fitb.social', serif('Bold', 48), c_dark, 820, b)
     return fr
 
-# ---------------- style: kinetic + photo card ----------------
-def kinetic_style(t, tt, bg, pcard, icon):
-    fr = bg.copy(); f = inter('Bold', 150)
+# ================= style 5: kinetic (gold word, photo card) =================
+def kinetic(t, v, tt, X):
+    bgc, acc, light = PALETTE[v]; fr = X['bg'].copy(); f = inter('Bold', 150); right = v % 2 == 0
     if tt < T2:
-        shift = ease((tt - T1) / 0.8) if tt > T1 else 0.0
-        lines = t['head']; lh = 165; y0 = (H - lh * 3) // 2 - 20
+        shift = ease((tt - T1) / 0.8) if tt > T1 else 0.0; lines = t['head']; lh = 165; y0 = (H - lh * 3) // 2 - 20
         for i, line in enumerate(lines):
             a = ease((tt - 0.35 * i - 0.2) / 0.45)
             if a <= 0: continue
-            colour = GOLD if line == t['gold'] else WHITE
-            font = f if shift == 0 else ImageFont.truetype(f.path, int(150 - 60 * shift))
-            tw = font.getlength(line); xc = (W - tw) / 2 * (1 - shift) + 110 * shift
-            y = (y0 + i * lh + (1 - a) * 40) * (1 - shift) + (280 + i * 110) * shift
+            colour = acc if line == t['gold'] else WHITE
+            font = f if shift == 0 else ImageFont.truetype(f.path, int(150 - 60 * shift)); tw = font.getlength(line)
+            xt = 110 if right else W - 110 - tw * (1 - 0.0)
+            xc = (W - tw) / 2 * (1 - shift) + xt * shift; y = (y0 + i * lh + (1 - a) * 40) * (1 - shift) + (280 + i * 110) * shift
             fr.alpha_composite(text_layer(line, font, colour, xc, y, a))
             if line == t['gold'] and shift == 0:
                 u = ease((tt - 0.35 * i - 0.9) / 0.5)
-                if u > 0: ImageDraw.Draw(fr).rectangle([xc, y + 158, xc + tw * u, y + 168], fill=GOLD)
+                if u > 0: ImageDraw.Draw(fr).rectangle([xc, y + 158, xc + tw * u, y + 168], fill=acc)
         if shift > 0:
-            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(pcard, (W - pcard.width - 80 + int((1 - shift) * 200), (H - pcard.height) // 2)); fade_layer(fr, layer, shift)
+            layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); pc = X['pcard'](tt - T1)
+            px = (W - pc.width - 80 + int((1 - shift) * 200)) if right else (80 - int((1 - shift) * 200))
+            layer.alpha_composite(pc, (px, (H - pc.height) // 2)); fade_layer(fr, layer, shift)
     elif tt < T3:
         for i, line in enumerate(t['head']):
-            fr.alpha_composite(text_layer(line, inter('Bold', 90), GOLD if line == t['gold'] else WHITE, 110, 280 + i * 110))
-        fr.alpha_composite(pcard, (W - pcard.width - 80, (H - pcard.height) // 2))
-        for i, pt in enumerate(t['points']):
-            pa = ease((tt - T2 - i * 1.6) / 0.5)
-            if pa <= 0: continue
-            fr.alpha_composite(text_layer('— ' + pt, inter('Medium', 40), WHITE, 110, 660 + i * 70, pa))
+            font = inter('Bold', 90); tw = font.getlength(line)
+            fr.alpha_composite(text_layer(line, font, acc if line == t['gold'] else WHITE, 110 if right else W - 110 - tw, 280 + i * 110))
+        pc = X['pcard'](tt - T1); fr.alpha_composite(pc, (W - pc.width - 80, (H - pc.height) // 2) if right else (80, (H - pc.height) // 2))
+        fr.alpha_composite(points_block(t['points'], tt, T2, inter('Medium', 40), WHITE, 110 if right else W - 760, 660, 70, marker='dash' if v % 2 else 'tick', accent=acc))
     else:
-        a = ease((tt - T3) / 0.6)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(icon, ((W - icon.width) // 2, 180 + int((1 - a) * 40))); fade_layer(fr, layer, a)
-        for i, (txt, font, colour) in enumerate([('Free. No paywall, no trial.', inter('Bold', 92), WHITE), ('fitb.social', inter('Medium', 54), GOLD)]):
-            la = ease((tt - T3 - 0.6 - i * 0.5) / 0.5)
-            if la > 0: centred(fr, txt, font, colour, 600 + i * 120 + int((1 - la) * 30), la)
+        return close_scene(t, tt - T3, [0, 2, 0, 1, 0][v], bgc, WHITE, acc, X['icon'])
     return fr
 
-# ---------------- style: plans (true landscape pixel page, from plans_built_around_your_goal) ----------------
-def plans_style(t, tt, big, big2, card, pcard, icon, wm):
-    fr = Image.new('RGBA', (W, H), SAGE + (255,))
-    if tt < T1:
-        # the giant word crosses the whole page, letters bleeding off top and bottom
-        x = W + 40 - (W + big.width + 80) * (tt / T1)
-        fr.alpha_composite(big, (int(x), (H - big.height) // 2))
-    elif tt < T2:
-        x = W * 0.1 - (tt - T1) / (T2 - T1) * big2.width * 0.45
-        fr.alpha_composite(big2, (int(x), H - big2.height + 200))
-        a = ease((tt - T1) / 0.7)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(card, ((W - card.width) // 2, (H - card.height) // 2 + int((1 - a) * 80))); fade_layer(fr, layer, a)
-    elif tt < T3:
-        x = -big.width * 0.35 - (tt - T2) / (T3 - T2) * big.width * 0.25
-        soft = big.copy(); soft.putalpha(soft.split()[3].point(lambda v: v * 55 // 100)); fr.alpha_composite(soft, (int(x), H - big.height + 260))
-        n = int(clamp01((tt - T2 - 0.1) / 1.2) * len(t['caption']))
-        if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 60, INK), (130, 190))
-        for i, pt in enumerate(t['points']):
-            pa = ease((tt - T2 - 1.6 - i * 1.3) / 0.4)
-            if pa <= 0: continue
-            fr.alpha_composite(pixel_text('> ' + pt.upper(), 30, INK), (130, 420 + i * 70))
-        a = ease((tt - T2) / 0.7)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(pcard, (W - pcard.width - 60 + int((1 - a) * 120), (H - pcard.height) // 2 + 20)); fade_layer(fr, layer, a)
-    else:
-        a = ease((tt - T3) / 0.6)
-        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(icon, ((W - icon.width) // 2, 230 + int((1 - a) * 50))); fade_layer(fr, layer, a)
-        b = ease((tt - T3 - 0.6) / 0.5)
-        if b > 0:
-            l1 = pixel_text('FREE. NO PAYWALL, NO TRIAL.', 52, INK); l2 = pixel_text('FITB.SOCIAL', 44, GREEN)
-            la = Image.new('RGBA', (W, H), (0, 0, 0, 0)); la.alpha_composite(l1, ((W - l1.width) // 2, 720)); la.alpha_composite(l2, ((W - l2.width) // 2, 800)); fade_layer(fr, la, b)
-    fr.alpha_composite(wm, (W - wm.width - 110, 90))
-    return fr
+STYLES = {'plans': plans, 'pixel': pixel, 'dark': dark, 'blobs': blobs, 'kinetic': kinetic}
 
-# ---------------- render ----------------
-def render(style, t):
-    shots = [shot_by_prefix(s) for s in t['shots']]
-    out = OUT / f"fitb-{style}-{t['key']}-24s.mp4"
-    audio = S / 'music' / f'{style}.wav'  # one original bed per style (make_tracks.py); vo_track(t) would add the voice
-    assets = {}
-    if style == 'pixel':
-        assets = dict(rows=(big_word(t['rows'][0]), big_word(t['rows'][1])), free=big_word('FREE'), pcard=product_card(shots[2]), phone_big=phone(shots[2], 620), photo=photo_card_small(shots[3]), icon=icon_card_img(), wm=wordmark(INK))
-    elif style == 'dark':
-        assets = dict(bg=dark_bg(), card=receipt_card(t['receipt']), icon=icon_card_img())
-    elif style == 'blobs':
-        ic = Image.new('RGBA', (150, 150), (255, 255, 255, 255)); i2 = ICON.resize((100, round(100 * ICON.height / ICON.width)), Image.LANCZOS)
-        ic.alpha_composite(i2, (25, 25)); m = Image.new('L', (150, 150), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, 149, 149], radius=24, fill=255)
-        icon_small = Image.new('RGBA', (150, 150), (0, 0, 0, 0)); icon_small.paste(ic, (0, 0), m)
-        assets = dict(pcard=photo_card(shots[4]), icon_small=shadowed(icon_small, alpha=90), star=blob((1000, 1000), SAGE2, seed=3, spikes=10, wobble=0.05),
-                      blob_m=blob((1500, 1300), MUSTARD, seed=5, wobble=0.16), blob_c=blob((900, 700), CREAM, seed=7), cloud=blob((1150, 820), CREAM2, seed=9, wobble=0.14))
-    elif style == 'kinetic':
-        assets = dict(bg=dark_bg(), pcard=photo_card(shots[3]), icon=icon_card_img())
-    elif style == 'plans':
-        from make_promos import card_dark
-        assets = dict(big=big_word(t['big']), big2=big_word(t['big2']), card=card_dark(t, shots[0]), pcard=photo_card(shots[1]), icon=icon_card_img(), wm=wordmark(INK))
-    n = int(TOTAL * FPS)
-    cmd = ['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-', '-i', str(audio),
-           '-map', '0:v', '-map', '1:a', '-t', str(TOTAL), '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p',
-           '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(out)]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    for i in range(n):
-        tt = i / FPS
-        if style == 'pixel': fr = pixel_portrait(t, tt, **assets)
-        elif style == 'dark': fr = dark_centred(t, tt, **assets)
-        elif style == 'blobs': fr = blobs_style(t, tt, **assets)
-        elif style == 'plans': fr = plans_style(t, tt, **assets)
-        else: fr = kinetic_style(t, tt, **assets)
-        # a quick dip at each section change
+def assets(style, t, v):
+    shots = [shot_by_prefix(p) for p in t['shots']]
+    scr = [Screen('scroll', shots[(v + i) % 5], dur=6.0) for i in range(3)]
+    clip = [Screen('clip', n) for n in CLIPS[t['key']]]
+    bgc, acc, light = PALETTE[v]
+    X = dict(scr=scr, clip=clip, icon=icon_card_img(), wm=wordmark(INK))
+    if style in ('plans', 'pixel'):
+        X.update(big=big_word(t['big']), big2=big_word(t['big2']), rows=(big_word(t['rows'][0]), big_word(t['rows'][1])), free=big_word('FREE'))
+    if style in ('dark', 'kinetic'):
+        bg = Image.new('RGB', (W, H), bgc); glow = Image.new('L', (W, H), 0)
+        ImageDraw.Draw(glow).ellipse([W * (0.15 + 0.1 * v), -H * 0.3, W * (0.85 + 0.1 * v), H * 1.1], fill=60); glow = glow.filter(ImageFilter.GaussianBlur(220))
+        X['bg'] = Image.composite(Image.new('RGB', (W, H), tuple(min(255, c + 14) for c in bgc)), bg, glow).convert('RGBA')
+    if style == 'dark': X['card'] = receipt_card(t['receipt'])
+    if style == 'blobs':
+        ic = Image.new('RGBA', (150, 150), (255, 255, 255, 255)); i2 = ICON.resize((100, round(100 * ICON.height / ICON.width)), Image.LANCZOS); ic.alpha_composite(i2, (25, 25))
+        m = Image.new('L', (150, 150), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, 149, 149], radius=24, fill=255); ism = Image.new('RGBA', (150, 150), (0, 0, 0, 0)); ism.paste(ic, (0, 0), m)
+        pal = [(SAGE2, MUSTARD, CREAM2), ((120, 160, 110), (210, 170, 60), (244, 236, 210)), ((160, 170, 90), (230, 190, 50), (238, 232, 200)), ((140, 160, 150), (200, 180, 90), (236, 236, 224)), (SAGE2, MUSTARD, CREAM2)][v]
+        X.update(icon_small=shadowed(ism, alpha=90), star=blob((1000, 1000), pal[0], seed=3 + v, spikes=8 + 2 * v, wobble=0.05), blob=blob((1500, 1300), pal[1], seed=5 + v, wobble=0.14 + 0.03 * v), cloud=blob((1150, 820), pal[2], seed=9 + v, wobble=0.14))
+    if style == 'kinetic':
+        kinds = [lambda tt: photo_card(clip[0], tt, tilt=-8, tint=acc), lambda tt: fan([scr[0], clip[0], scr[1]], tt, 0.7), lambda tt: photo_card(scr[0], tt, tilt=6, tint=acc),
+                 lambda tt: white_card(phone_img(clip[1].at(tt), 0.8), 560, 780), lambda tt: dark_card(t['card'], clip[0], tt, bg=(30, 38, 26))][v]
+        X['pcard'] = kinds
+    return X
+
+def render(style, t, v):
+    X = assets(style, t, v); out = OUT / f"fitb-{style}-{t['key']}-24s.mp4"
+    cmd = ['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-', '-i', str(S / 'music' / f'{style}.wav'),
+           '-map', '0:v', '-map', '1:a', '-t', str(TOTAL), '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(out)]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE); fn = STYLES[style]
+    for i in range(int(TOTAL * FPS)):
+        tt = i / FPS; fr = fn(t, v, tt, X)
         for cut in (T1, T2, T3):
             dt = abs(tt - cut)
             if dt < 0.18: fr = Image.blend(fr, Image.new('RGBA', (W, H), (20, 24, 14, 255)), (1 - dt / 0.18) * 0.7)
@@ -425,8 +372,8 @@ def render(style, t):
     proc.stdin.close(); proc.wait(); print('wrote', out.name)
 
 if __name__ == '__main__':
-    styles = sys.argv[1].split(',') if len(sys.argv) > 1 else ['plans', 'pixel', 'dark', 'blobs', 'kinetic']
+    styles = sys.argv[1].split(',') if len(sys.argv) > 1 else list(STYLES)
     keys = sys.argv[2].split(',') if len(sys.argv) > 2 else [t['key'] for t in THEMES]
     for style in styles:
-        for t in THEMES:
-            if t['key'] in keys: render(style, t)
+        for v, t in enumerate(THEMES):
+            if t['key'] in keys: render(style, t, v)
