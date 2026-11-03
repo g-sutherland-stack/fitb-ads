@@ -16,7 +16,10 @@ from make_sets import (THEMES, serif, receipt_card, blob, fade_layer, text_layer
 
 OUT = S / 'sets2'; OUT.mkdir(exist_ok=True)
 SW, SH = 340, 720          # phone screen size every source is rendered at
-CLIPS = {'tracking': [5, 10, 40], 'trainers': [11, 4, 17], 'gym': [41, 6, 22], 'recovery': [49, 25, 2], 'weight-loss': [15, 26, 45]}
+# clips 5, 6, 15, 17, 29, 30, 37, 47, 48 are one presenter the client does not want used; never pick them
+EXCLUDED = {5, 6, 15, 17, 29, 30, 37, 47, 48}
+CLIPS = {'tracking': [10, 40, 31], 'trainers': [11, 4, 38], 'gym': [41, 22, 27], 'recovery': [49, 25, 2], 'weight-loss': [26, 45, 43]}
+assert not any(c in EXCLUDED for v in CLIPS.values() for c in v)
 PALETTE = [  # per theme: (dark bg, accent, light bg) so the same style never wears the same colours twice
     ((46, 59, 38), GOLD, SAGE), ((38, 50, 44), (214, 196, 120), (223, 229, 220)), ((52, 58, 34), (236, 190, 40), (229, 230, 212)),
     ((40, 48, 52), (190, 206, 150), (222, 230, 226)), ((44, 56, 36), GOLD, (226, 230, 214)),
