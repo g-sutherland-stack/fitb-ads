@@ -17,3 +17,16 @@ Five themed promos in the style of the weight-loss promo: a dark green kinetic t
 - [Tracking](promos/fitb-promo-tracking-30s-landscape.mp4) · [Trainers](promos/fitb-promo-trainers-30s-landscape.mp4) · [Gym](promos/fitb-promo-gym-30s-landscape.mp4) · [Recovery](promos/fitb-promo-recovery-30s-landscape.mp4) · [Weight loss](promos/fitb-promo-weight-loss-30s-landscape.mp4)
 
 `promos/build-promos.py` renders them; the copy, the big word and the app screens for each are the `PROMOS` list at the top.
+
+## 24-second promo sets, one per style (voice-over + music)
+
+Four more sets in the other four styles of the uploaded promos, five themes each (tracking, trainers, gym, recovery, weight loss), 1920×1080, 24 s, a spoken voice-over over the FitB music.
+
+| Style | From | Files |
+|---|---|---|
+| Pixel | weight_loss_guesswork_original | [promos/pixel](promos/pixel) |
+| Dark centred | weight_loss_guesswork_landscape | [promos/dark](promos/dark) |
+| Blobs | weight_loss_guesswork_original_2 | [promos/blobs](promos/blobs) |
+| Kinetic | weight_loss_guesswork_alt | [promos/kinetic](promos/kinetic) |
+
+`promos/build-sets.py` renders them (needs `build-promos.py` beside it, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy, voice-over lines and app screens per theme are the `THEMES` list.
