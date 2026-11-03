@@ -10,23 +10,16 @@ The wall of 49 member clips keeps playing; one clip comes forward, plays with it
 
 The 15-second ad set, the 30-second feature videos and the video walls stay on the `marketing-ads` branch of the app repo.
 
-## 30-second promos (landscape, with music)
+## Promo sets, one per style (24 s, voice-over + music)
 
-Five themed promos in the style of the weight-loss promo: a dark green kinetic title, a sage page with giant pixel letters and a phone card, and a "Free. No paywall, no trial." close. 1920×1080, 30 s, FitB music.
+Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, a spoken voice-over over the FitB music. Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
 
-- [Tracking](promos/fitb-promo-tracking-30s-landscape.mp4) · [Trainers](promos/fitb-promo-trainers-30s-landscape.mp4) · [Gym](promos/fitb-promo-gym-30s-landscape.mp4) · [Recovery](promos/fitb-promo-recovery-30s-landscape.mp4) · [Weight loss](promos/fitb-promo-weight-loss-30s-landscape.mp4)
-
-`promos/build-promos.py` renders them; the copy, the big word and the app screens for each are the `PROMOS` list at the top.
-
-## 24-second promo sets, one per style (voice-over + music)
-
-Four more sets in the other four styles of the uploaded promos, five themes each (tracking, trainers, gym, recovery, weight loss), 1920×1080, 24 s, a spoken voice-over over the FitB music.
-
-| Style | From | Files |
+| Style | Your reference video | Files |
 |---|---|---|
-| Pixel | weight_loss_guesswork_original | [promos/pixel](promos/pixel) |
-| Dark centred | weight_loss_guesswork_landscape | [promos/dark](promos/dark) |
-| Blobs | weight_loss_guesswork_original_2 | [promos/blobs](promos/blobs) |
-| Kinetic | weight_loss_guesswork_alt | [promos/kinetic](promos/kinetic) |
+| Plans (landscape pixel page) | plans_built_around_your_goal_original_landscape | [promos/plans](promos/plans) |
+| Pixel (portrait page, blurred sides) | weight_loss_guesswork_original_landscape | [promos/pixel](promos/pixel) |
+| Dark centred (receipt card) | weight_loss_guesswork_landscape | [promos/dark](promos/dark) |
+| Blobs (serif, organic shapes) | weight_loss_guesswork_original_2_landscape | [promos/blobs](promos/blobs) |
+| Kinetic (gold word, photo card) | weight_loss_guesswork_alt_landscape | [promos/kinetic](promos/kinetic) |
 
-`promos/build-sets.py` renders them (needs `build-promos.py` beside it, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy, voice-over lines and app screens per theme are the `THEMES` list.
+`promos/build-sets.py` renders them (with `build-promos.py` beside it for the shared drawing code, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy, voice-over lines and app screens per theme are the `THEMES` list.

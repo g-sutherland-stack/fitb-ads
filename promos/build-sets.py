@@ -23,7 +23,7 @@ OLIVE = (90, 110, 48); OLIVE_DARK = (58, 72, 30); SAGE2 = (122, 150, 72); MUSTAR
 TOTAL = 24.0; T1, T2, T3 = 5.0, 12.0, 18.0
 
 THEMES = [
-    dict(key='tracking', head=['Tracking,', 'minus the', 'hassle.'], gold='hassle.', big='TRACK', serif_head='Tracking,\nminus the hassle', serif_two='Snap it.\nLogged.',
+    dict(key='tracking', big2='LOGGED', head=['Tracking,', 'minus the', 'hassle.'], gold='hassle.', big='TRACK', serif_head='Tracking,\nminus the hassle', serif_two='Snap it.\nLogged.',
          caption='LOG A MEAL\nFROM ONE PHOTO', card='Snap it.\nLogged.', feature='Snap your meal. Logged.', sub='One photo. Calories, protein, water, counted.',
          points=['Calories and protein from one photo', 'Water, steps, sleep and workouts', 'Your day score, 0 to 100'],
          receipt=dict(title='Lunch, from a photo', subtitle='Chicken and avocado salad', rows=[('Calories', '520 kcal'), ('Protein', '38 g'), ('Water today', '1.2 L')],
@@ -31,7 +31,7 @@ THEMES = [
          shots=['0bd33d40', 'fa4f4d1d', '6ac5ae12'],
          vo=['Tracking, minus the hassle.', 'Log a meal from one photo. FitB works out the calories and protein.',
              'Water, steps, sleep and workouts, all in one place, with a day score you can win.', 'Free. No paywall, no trial. Download FitB today.']),
-    dict(key='trainers', head=['A trainer,', 'minus the', 'guesswork.'], gold='guesswork.', big='TRAINER', serif_head='A trainer,\nminus the guesswork', serif_two='Real coaches.\nReal bookings.',
+    dict(key='trainers', big2='BOOKED', head=['A trainer,', 'minus the', 'guesswork.'], gold='guesswork.', big='TRAINER', serif_head='A trainer,\nminus the guesswork', serif_two='Real coaches.\nReal bookings.',
          caption='FIND A TRAINER\nAT YOUR LEVEL', card='Real coaches.\nReal bookings.', feature='Find a trainer. Booked.', sub='Verified. Prices up front. Pay in the app.',
          points=['Verified trainers near you', 'Prices and availability up front', 'Book and pay in the app'],
          receipt=dict(title='Trainer near you', subtitle='Maribel, strength coach, 1.2 miles', rows=[('Session', '£35'), ('Next slot', 'Tue 18:00'), ('Rating', '4.9')],
@@ -39,7 +39,7 @@ THEMES = [
          shots=['99adf839', 'f870b486', '8643bee3'],
          vo=['A trainer, minus the guesswork.', 'Find a verified personal trainer near you, at your level.',
              'See prices and availability up front, then book and pay in the app.', 'Free to join. Download FitB today.']),
-    dict(key='gym', head=['Your gym,', 'minus the', 'queue.'], gold='queue.', big='GYM', serif_head='Your gym,\nminus the queue', serif_two='Find a gym.\nFill your week.',
+    dict(key='gym', big2='CLASSES', head=['Your gym,', 'minus the', 'queue.'], gold='queue.', big='GYM', serif_head='Your gym,\nminus the queue', serif_two='Find a gym.\nFill your week.',
          caption='CLASSES YOU CAN\nBOOK IN A TAP', card='Find a gym.\nFill your week.', feature='Pick a class. Reserved.', sub='Live timetables. One tap. Trainers at every gym.',
          points=['Gyms by town with live timetables', 'Reserve a class in one tap', 'Trainers at every gym'],
          receipt=dict(title='Group Fitness Class', subtitle="Tom's Health & Fitness, 07:00", rows=[('Spots left', '6'), ('Price', '£8'), ('Trainer', 'Kaleigh')],
@@ -47,7 +47,7 @@ THEMES = [
          shots=['ddf6a2a5', 'd1b71f80', '9f37e178'],
          vo=['Your gym, minus the queue.', 'Gyms by town, with live timetables.',
              'Reserve a class in one tap, and meet the trainers at every gym.', 'Free to join. Download FitB today.']),
-    dict(key='recovery', head=['Recovery,', 'minus the', 'burnout.'], gold='burnout.', big='RECOVER', serif_head='Recovery,\nminus the burnout', serif_two='Rest is part\nof the plan.',
+    dict(key='recovery', big2='REST', head=['Recovery,', 'minus the', 'burnout.'], gold='burnout.', big='RECOVER', serif_head='Recovery,\nminus the burnout', serif_two='Rest is part\nof the plan.',
          caption='SLEEP, WATER\nAND REST, TRACKED', card='Rest is part\nof the plan.', feature='Sleep, water, rest. Tracked.', sub='See how recovered you really are.',
          points=['Sleep and recovery check-ins', 'Meditations and mobility', 'Rest days that count'],
          receipt=dict(title='Recovery check-in', subtitle='Last night', rows=[('Sleep', '7 h 20'), ('Recovery', '72%'), ('Water', '1.8 L')],
@@ -55,7 +55,7 @@ THEMES = [
          shots=['fde66f60', '9756f970', '5a90a4c4'],
          vo=['Recovery, minus the burnout.', 'Log your sleep, water and rest, and see how recovered you really are.',
              'Meditations, mobility and rest days that count towards your plan.', 'Free. No paywall, no trial. Download FitB today.']),
-    dict(key='weight-loss', head=['Weight loss,', 'minus the', 'guesswork.'], gold='guesswork.', big='WEIGHT', serif_head='Weight loss,\nminus the guesswork', serif_two='Trend,\nnot one number.',
+    dict(key='weight-loss', big2='TREND', head=['Weight loss,', 'minus the', 'guesswork.'], gold='guesswork.', big='WEIGHT', serif_head='Weight loss,\nminus the guesswork', serif_two='Trend,\nnot one number.',
          caption='THE SCALE IS\nNOT THE SCORE', card='Trend,\nnot one number.', feature='Weigh in weekly. Trend, not a verdict.', sub='A weekly review moves your target in safe steps.',
          points=['Weigh in weekly, see the trend', 'A weekly review adjusts your target', 'A buddy who checks in'],
          receipt=dict(title='Weekly review', subtitle='Weigh-in day', rows=[('Trend', '-0.4 kg'), ('Days logged', '6 of 7'), ('Target', '1,850 kcal')],
@@ -316,6 +316,39 @@ def kinetic_style(t, tt, bg, pcard, icon):
             if la > 0: centred(fr, txt, font, colour, 600 + i * 120 + int((1 - la) * 30), la)
     return fr
 
+# ---------------- style: plans (true landscape pixel page, from plans_built_around_your_goal) ----------------
+def plans_style(t, tt, big, big2, card, pcard, icon, wm):
+    fr = Image.new('RGBA', (W, H), SAGE + (255,))
+    if tt < T1:
+        # the giant word crosses the whole page, letters bleeding off top and bottom
+        x = W + 40 - (W + big.width + 80) * (tt / T1)
+        fr.alpha_composite(big, (int(x), (H - big.height) // 2))
+    elif tt < T2:
+        x = W * 0.1 - (tt - T1) / (T2 - T1) * big2.width * 0.45
+        fr.alpha_composite(big2, (int(x), H - big2.height + 200))
+        a = ease((tt - T1) / 0.7)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(card, ((W - card.width) // 2, (H - card.height) // 2 + int((1 - a) * 80))); fade_layer(fr, layer, a)
+    elif tt < T3:
+        x = -big.width * 0.35 - (tt - T2) / (T3 - T2) * big.width * 0.25
+        soft = big.copy(); soft.putalpha(soft.split()[3].point(lambda v: v * 55 // 100)); fr.alpha_composite(soft, (int(x), H - big.height + 260))
+        n = int(clamp01((tt - T2 - 0.1) / 1.2) * len(t['caption']))
+        if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 60, INK), (130, 190))
+        for i, pt in enumerate(t['points']):
+            pa = ease((tt - T2 - 1.6 - i * 1.3) / 0.4)
+            if pa <= 0: continue
+            fr.alpha_composite(pixel_text('> ' + pt.upper(), 30, INK), (130, 420 + i * 70))
+        a = ease((tt - T2) / 0.7)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(pcard, (W - pcard.width - 60 + int((1 - a) * 120), (H - pcard.height) // 2 + 20)); fade_layer(fr, layer, a)
+    else:
+        a = ease((tt - T3) / 0.6)
+        layer = Image.new('RGBA', (W, H), (0, 0, 0, 0)); layer.alpha_composite(icon, ((W - icon.width) // 2, 230 + int((1 - a) * 50))); fade_layer(fr, layer, a)
+        b = ease((tt - T3 - 0.6) / 0.5)
+        if b > 0:
+            l1 = pixel_text('FREE. NO PAYWALL, NO TRIAL.', 52, INK); l2 = pixel_text('FITB.SOCIAL', 44, GREEN)
+            la = Image.new('RGBA', (W, H), (0, 0, 0, 0)); la.alpha_composite(l1, ((W - l1.width) // 2, 720)); la.alpha_composite(l2, ((W - l2.width) // 2, 800)); fade_layer(fr, la, b)
+    fr.alpha_composite(wm, (W - wm.width - 110, 90))
+    return fr
+
 # ---------------- render ----------------
 def render(style, t):
     shots = [shot_by_prefix(s) for s in t['shots']]
@@ -335,6 +368,9 @@ def render(style, t):
                       blob_m=blob((1500, 1300), MUSTARD, seed=5, wobble=0.16), blob_c=blob((900, 700), CREAM, seed=7), cloud=blob((1150, 820), CREAM2, seed=9, wobble=0.14))
     elif style == 'kinetic':
         assets = dict(bg=dark_bg(), pcard=photo_card(shots[0]), icon=icon_card_img())
+    elif style == 'plans':
+        from make_promos import card_dark
+        assets = dict(big=big_word(t['big']), big2=big_word(t['big2']), card=card_dark(t, shots[0]), pcard=photo_card(shots[1]), icon=icon_card_img(), wm=wordmark(INK))
     n = int(TOTAL * FPS)
     cmd = ['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-', '-i', str(audio),
            '-map', '0:v', '-map', '1:a', '-t', str(TOTAL), '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p',
@@ -345,6 +381,7 @@ def render(style, t):
         if style == 'pixel': fr = pixel_portrait(t, tt, **assets)
         elif style == 'dark': fr = dark_centred(t, tt, **assets)
         elif style == 'blobs': fr = blobs_style(t, tt, **assets)
+        elif style == 'plans': fr = plans_style(t, tt, **assets)
         else: fr = kinetic_style(t, tt, **assets)
         # a quick dip at each section change
         for cut in (T1, T2, T3):
@@ -354,7 +391,7 @@ def render(style, t):
     proc.stdin.close(); proc.wait(); print('wrote', out.name)
 
 if __name__ == '__main__':
-    styles = sys.argv[1].split(',') if len(sys.argv) > 1 else ['pixel', 'dark', 'blobs', 'kinetic']
+    styles = sys.argv[1].split(',') if len(sys.argv) > 1 else ['plans', 'pixel', 'dark', 'blobs', 'kinetic']
     keys = sys.argv[2].split(',') if len(sys.argv) > 2 else [t['key'] for t in THEMES]
     for style in styles:
         for t in THEMES:
