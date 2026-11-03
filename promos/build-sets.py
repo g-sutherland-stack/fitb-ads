@@ -28,7 +28,7 @@ THEMES = [
          points=['Calories and protein from one photo', 'Water, steps, sleep and workouts', 'Your day score, 0 to 100'],
          receipt=dict(title='Lunch, from a photo', subtitle='Chicken and avocado salad', rows=[('Calories', '520 kcal'), ('Protein', '38 g'), ('Water today', '1.2 L')],
                       note='Barcode scanning included. No premium tier, no trial.', button='Log My First Meal Free'),
-         shots=['0bd33d40', 'fa4f4d1d', '6ac5ae12'],
+         shots=['0bd33d40', 'fa4f4d1d', '6ac5ae12', '5a90a4c4', '97e9f9ec'], rows=('SNAP', 'LOG'),
          vo=['Tracking, minus the hassle.', 'Log a meal from one photo. FitB works out the calories and protein.',
              'Water, steps, sleep and workouts, all in one place, with a day score you can win.', 'Free. No paywall, no trial. Download FitB today.']),
     dict(key='trainers', big2='BOOKED', head=['A trainer,', 'minus the', 'guesswork.'], gold='guesswork.', big='TRAINER', serif_head='A trainer,\nminus the guesswork', serif_two='Real coaches.\nReal bookings.',
@@ -36,7 +36,7 @@ THEMES = [
          points=['Verified trainers near you', 'Prices and availability up front', 'Book and pay in the app'],
          receipt=dict(title='Trainer near you', subtitle='Maribel, strength coach, 1.2 miles', rows=[('Session', '£35'), ('Next slot', 'Tue 18:00'), ('Rating', '4.9')],
                       note='Verified trainer. Book and pay in the app.', button='Book A Session'),
-         shots=['99adf839', 'f870b486', '8643bee3'],
+         shots=['99adf839', 'f870b486', '8643bee3', 'a19253e4', '9e8c4203'], rows=('REAL', 'COACH'),
          vo=['A trainer, minus the guesswork.', 'Find a verified personal trainer near you, at your level.',
              'See prices and availability up front, then book and pay in the app.', 'Free to join. Download FitB today.']),
     dict(key='gym', big2='CLASSES', head=['Your gym,', 'minus the', 'queue.'], gold='queue.', big='GYM', serif_head='Your gym,\nminus the queue', serif_two='Find a gym.\nFill your week.',
@@ -44,7 +44,7 @@ THEMES = [
          points=['Gyms by town with live timetables', 'Reserve a class in one tap', 'Trainers at every gym'],
          receipt=dict(title='Group Fitness Class', subtitle="Tom's Health & Fitness, 07:00", rows=[('Spots left', '6'), ('Price', '£8'), ('Trainer', 'Kaleigh')],
                       note='Live timetable. Reserve in one tap.', button='Reserve A Spot'),
-         shots=['ddf6a2a5', 'd1b71f80', '9f37e178'],
+         shots=['ddf6a2a5', 'd1b71f80', '9f37e178', 'bafbad00', '1a9a571a'], rows=('BOOK', 'CLASS'),
          vo=['Your gym, minus the queue.', 'Gyms by town, with live timetables.',
              'Reserve a class in one tap, and meet the trainers at every gym.', 'Free to join. Download FitB today.']),
     dict(key='recovery', big2='REST', head=['Recovery,', 'minus the', 'burnout.'], gold='burnout.', big='RECOVER', serif_head='Recovery,\nminus the burnout', serif_two='Rest is part\nof the plan.',
@@ -52,7 +52,7 @@ THEMES = [
          points=['Sleep and recovery check-ins', 'Meditations and mobility', 'Rest days that count'],
          receipt=dict(title='Recovery check-in', subtitle='Last night', rows=[('Sleep', '7 h 20'), ('Recovery', '72%'), ('Water', '1.8 L')],
                       note='Rest days count. Meditations included.', button="Log Tonight's Sleep"),
-         shots=['fde66f60', '9756f970', '5a90a4c4'],
+         shots=['fde66f60', '9756f970', '5a90a4c4', '8fc9efb9', 'c403f830'], rows=('REST', 'WELL'),
          vo=['Recovery, minus the burnout.', 'Log your sleep, water and rest, and see how recovered you really are.',
              'Meditations, mobility and rest days that count towards your plan.', 'Free. No paywall, no trial. Download FitB today.']),
     dict(key='weight-loss', big2='TREND', head=['Weight loss,', 'minus the', 'guesswork.'], gold='guesswork.', big='WEIGHT', serif_head='Weight loss,\nminus the guesswork', serif_two='Trend,\nnot one number.',
@@ -60,7 +60,7 @@ THEMES = [
          points=['Weigh in weekly, see the trend', 'A weekly review adjusts your target', 'A buddy who checks in'],
          receipt=dict(title='Weekly review', subtitle='Weigh-in day', rows=[('Trend', '-0.4 kg'), ('Days logged', '6 of 7'), ('Target', '1,850 kcal')],
                       note='The scale is not the score.', button='Start My Week Free'),
-         shots=['0bd33d40', 'ef8ffbfc', 'ee64cb03'],
+         shots=['0bd33d40', 'ef8ffbfc', 'ee64cb03', 'fa4f4d1d', '6ac5ae12'], rows=('WEIGHT', 'LOSS'),
          vo=['Weight loss, minus the guesswork.', 'Weigh in once a week and see your trend, not one number.',
              'A weekly review adjusts your calorie target, and a buddy checks in, so you never do it alone.', 'Free. No paywall, no trial. Download FitB today.']),
 ]
@@ -167,41 +167,70 @@ def blob(size, colour, seed=1, spikes=0, wobble=0.12):
     im = Image.new('RGBA', size, (0, 0, 0, 0)); ImageDraw.Draw(im).polygon(pts, fill=colour + (255,))
     return im
 
-# ---------------- style: pixel (portrait, blurred sides) ----------------
+# ---------------- style: pixel (video 1: portrait page on blurred sides) ----------------
 PW, PH = 1080, 1920
-def pixel_portrait(t, tt, big, card, icon, wm):
+def product_card(shot, w=620, h=900):
+    """White card with the phone standing on it, soft shadow, like the first product shot in video 1."""
+    c = Image.new('RGBA', (w, h), (247, 248, 243, 255))
+    lg = LOGO.resize((round(LOGO.width * 48 / LOGO.height), 48), Image.LANCZOS); c.alpha_composite(lg, (36, 32))
+    ph = phone(shot, 620)
+    c.alpha_composite(shadowed(ph, blur=30, off=(0, 26), alpha=120), ((w - ph.width) // 2 - 90, 120))
+    mask = Image.new('L', (w, h), 0); ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=14, fill=255)
+    out = Image.new('RGBA', (w, h), (0, 0, 0, 0)); out.paste(c, (0, 0), mask)
+    return shadowed(out, blur=24, alpha=70)
+
+def pixel_portrait(t, tt, rows, free, pcard, phone_big, photo, icon, wm):
     fr = Image.new('RGBA', (PW, PH), SAGE + (255,))
-    if tt < T2:
-        x = PW + 40 - (PW + big.width + 80) * (tt / T2)
-        fr.alpha_composite(big, (int(x), 300))
-        n = int(clamp01((tt - 0.2) / 1.4) * len(t['caption']))
-        if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 64, INK), (80, 160))
-        if tt > T1:
-            a = ease((tt - T1) / 0.7); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
-            layer.alpha_composite(card, ((PW - card.width) // 2, 560 + int((1 - a) * 90))); fade_layer(fr, layer, a)
-    elif tt < T3:
-        x = -big.width * 0.3 - (tt - T2) / (T3 - T2) * big.width * 0.3
-        soft = big.copy(); soft.putalpha(soft.split()[3].point(lambda v: v * 45 // 100)); fr.alpha_composite(soft, (int(x), 1100))
-        fr.alpha_composite(pixel_text(t['big'], 52, INK), (80, 160))
+    cap = '\n'.join(l.upper() for l in t['head'])
+    if tt < T1:
+        # two stacked rows of giant letters slide in at different speeds
+        x1 = PW + 40 - (PW + rows[0].width + 200) * ease(tt / 4.6)
+        x2 = PW + 300 - (PW + rows[1].width + 300) * ease(tt / 5.2)
+        fr.alpha_composite(rows[0], (int(x1), 120)); fr.alpha_composite(rows[1], (int(x2), 1080))
+        n = int(clamp01((tt - 0.8) / 1.6) * len(cap))
+        if cap[:n].strip():
+            txt = pixel_text(cap[:n], 58, INK); fr.alpha_composite(txt, (120, 700))
+    elif tt < 10.0:
+        k = ease((tt - T1) / 0.6)
+        # caption shrinks up to the top-left, the product card lands, the FREE row passes above
+        small = pixel_text(cap, int(58 - 22 * k), INK)
+        fr.alpha_composite(small, (int(120 - 20 * k), int(700 - 560 * k)))
+        x = PW * 0.4 - (tt - T1) / 5.0 * (free.width + PW)
+        fr.alpha_composite(free, (int(x), 1180))
+        a = ease((tt - T1 - 0.2) / 0.6)
+        layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); layer.alpha_composite(pcard, ((PW - pcard.width) // 2, 440 + int((1 - a) * 80))); fade_layer(fr, layer, a)
+    elif tt < 14.0:
+        # zoom into the phone screen
+        z = ease((tt - 10.0) / 1.6); sc = 1.0 + 1.9 * z
+        pb = phone_big.resize((int(phone_big.width * sc), int(phone_big.height * sc)), Image.BILINEAR)
+        fr.alpha_composite(pb, ((PW - pb.width) // 2, int(520 - z * 900)))
+        x = PW * 0.4 - (tt - T1) / 5.0 * (free.width + PW); fr.alpha_composite(free, (int(x), 1180))
+    elif tt < 19.0:
+        x = -rows[1].width * 0.25 - (tt - 14.0) / 5.0 * rows[1].width * 0.35
+        fr.alpha_composite(rows[1], (int(x), -260))
+        a = ease((tt - 14.0) / 0.6)
+        layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); layer.alpha_composite(photo, ((PW - photo.width) // 2, 560 + int((1 - a) * 60))); fade_layer(fr, layer, a)
+        n = int(clamp01((tt - 14.6) / 1.4) * len(t['caption']))
+        if t['caption'][:n].strip(): fr.alpha_composite(pixel_text(t['caption'][:n], 62, INK), (120, 1280))
         for i, pt in enumerate(t['points']):
-            pa = ease((tt - T2 - 0.2 - i * 1.6) / 0.5)
+            pa = ease((tt - 16.2 - i * 0.8) / 0.4)
             if pa <= 0: continue
-            fr.alpha_composite(pixel_text('> ' + pt.upper(), 40, INK), (80, 330 + i * 150))
-        a = ease((tt - T2) / 0.5); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
-        layer.alpha_composite(card, ((PW - card.width) // 2, 860)); fade_layer(fr, layer, a)
+            fr.alpha_composite(pixel_text('> ' + pt.upper(), 30, INK), (120, 1480 + i * 70))
     else:
-        a = ease((tt - T3) / 0.6); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
-        layer.alpha_composite(icon, ((PW - icon.width) // 2, 640 + int((1 - a) * 60))); fade_layer(fr, layer, a)
-        b = ease((tt - T3 - 0.6) / 0.5)
+        a = ease((tt - 19.0) / 0.6); layer = Image.new('RGBA', (PW, PH), (0, 0, 0, 0))
+        layer.alpha_composite(icon, ((PW - icon.width) // 2, 700 + int((1 - a) * 60))); fade_layer(fr, layer, a)
+        b = ease((tt - 19.8) / 0.5)
         if b > 0:
-            l1 = pixel_text('FREE. NO PAYWALL.', 56, INK); l2 = pixel_text('FITB.SOCIAL', 48, GREEN)
-            la = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); la.alpha_composite(l1, ((PW - l1.width) // 2, 1080)); la.alpha_composite(l2, ((PW - l2.width) // 2, 1170)); fade_layer(fr, la, b)
+            l1 = pixel_text('FREE. NO PAYWALL.', 52, INK); l2 = pixel_text('FITB.SOCIAL', 44, GREEN)
+            la = Image.new('RGBA', (PW, PH), (0, 0, 0, 0)); la.alpha_composite(l1, ((PW - l1.width) // 2, 1120)); la.alpha_composite(l2, ((PW - l2.width) // 2, 1200)); fade_layer(fr, la, b)
     fr.alpha_composite(wm, (PW - wm.width - 70, 70))
-    # letterbox: blurred fill behind the portrait frame
     small = fr.resize((480, 270), Image.BILINEAR).filter(ImageFilter.GaussianBlur(6)).resize((W, H), Image.BICUBIC)
     port = fr.resize((608, 1080), Image.LANCZOS)
     small.alpha_composite(port, ((W - 608) // 2, 0))
     return small
+
+def photo_card_small(shot):
+    pc = photo_card(shot); return pc.resize((int(pc.width * 0.72), int(pc.height * 0.72)), Image.LANCZOS)
 
 # ---------------- style: dark centred + receipt ----------------
 def dark_centred(t, tt, bg, card, icon):
@@ -359,21 +388,20 @@ def plans_style(t, tt, big, big2, card, pcard, icon, wm):
 def render(style, t):
     shots = [shot_by_prefix(s) for s in t['shots']]
     out = OUT / f"fitb-{style}-{t['key']}-24s.mp4"
-    audio = music_only()  # voice-over dropped on request; vo_track(t) brings it back
+    audio = S / 'music' / f'{style}.wav'  # one original bed per style (make_tracks.py); vo_track(t) would add the voice
     assets = {}
     if style == 'pixel':
-        from make_promos import card_dark
-        assets = dict(big=big_word(t['big']), card=card_dark(t, shots[0]), icon=icon_card_img(), wm=wordmark(INK))
+        assets = dict(rows=(big_word(t['rows'][0]), big_word(t['rows'][1])), free=big_word('FREE'), pcard=product_card(shots[2]), phone_big=phone(shots[2], 620), photo=photo_card_small(shots[3]), icon=icon_card_img(), wm=wordmark(INK))
     elif style == 'dark':
         assets = dict(bg=dark_bg(), card=receipt_card(t['receipt']), icon=icon_card_img())
     elif style == 'blobs':
         ic = Image.new('RGBA', (150, 150), (255, 255, 255, 255)); i2 = ICON.resize((100, round(100 * ICON.height / ICON.width)), Image.LANCZOS)
         ic.alpha_composite(i2, (25, 25)); m = Image.new('L', (150, 150), 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, 149, 149], radius=24, fill=255)
         icon_small = Image.new('RGBA', (150, 150), (0, 0, 0, 0)); icon_small.paste(ic, (0, 0), m)
-        assets = dict(pcard=photo_card(shots[0]), icon_small=shadowed(icon_small, alpha=90), star=blob((1000, 1000), SAGE2, seed=3, spikes=10, wobble=0.05),
+        assets = dict(pcard=photo_card(shots[4]), icon_small=shadowed(icon_small, alpha=90), star=blob((1000, 1000), SAGE2, seed=3, spikes=10, wobble=0.05),
                       blob_m=blob((1500, 1300), MUSTARD, seed=5, wobble=0.16), blob_c=blob((900, 700), CREAM, seed=7), cloud=blob((1150, 820), CREAM2, seed=9, wobble=0.14))
     elif style == 'kinetic':
-        assets = dict(bg=dark_bg(), pcard=photo_card(shots[0]), icon=icon_card_img())
+        assets = dict(bg=dark_bg(), pcard=photo_card(shots[3]), icon=icon_card_img())
     elif style == 'plans':
         from make_promos import card_dark
         assets = dict(big=big_word(t['big']), big2=big_word(t['big2']), card=card_dark(t, shots[0]), pcard=photo_card(shots[1]), icon=icon_card_img(), wm=wordmark(INK))
