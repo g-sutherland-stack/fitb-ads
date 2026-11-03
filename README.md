@@ -10,9 +10,9 @@ The wall of 49 member clips keeps playing; one clip comes forward, plays with it
 
 The 15-second ad set, the 30-second feature videos and the video walls stay on the `marketing-ads` branch of the app repo.
 
-## Promo sets, one per style (24 s, voice-over + music)
+## Promo sets, one per style (24 s, music)
 
-Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, a spoken voice-over over the FitB music. Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
+Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, FitB music only (no voice-over). Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
 
 | Style | Your reference video | Files |
 |---|---|---|
@@ -22,4 +22,4 @@ Five sets, one in the style of each uploaded promo, five themes each (tracking, 
 | Blobs (serif, organic shapes) | weight_loss_guesswork_original_2_landscape | [promos/blobs](promos/blobs) |
 | Kinetic (gold word, photo card) | weight_loss_guesswork_alt_landscape | [promos/kinetic](promos/kinetic) |
 
-`promos/build-sets.py` renders them (with `build-promos.py` beside it for the shared drawing code, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy, voice-over lines and app screens per theme are the `THEMES` list.
+`promos/build-sets.py` renders them (with `build-promos.py` beside it for the shared drawing code, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy and app screens per theme are the `THEMES` list.

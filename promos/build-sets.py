@@ -93,6 +93,12 @@ def vo_track(t):
     subprocess.run(cmd + ['-filter_complex', fc, '-map', '[a]', '-ar', '48000', str(out)], check=True)
     return out
 
+def music_only():
+    out = VO / 'music-24.wav'
+    if not out.exists():
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(MUSIC), '-af', 'atrim=0:24,afade=t=in:st=0:d=0.5,afade=t=out:st=22.5:d=1.5', '-ar', '48000', str(out)], check=True)
+    return out
+
 # ---------------- shared bits ----------------
 def fade_layer(fr, layer, a):
     if a <= 0: return
@@ -353,7 +359,7 @@ def plans_style(t, tt, big, big2, card, pcard, icon, wm):
 def render(style, t):
     shots = [shot_by_prefix(s) for s in t['shots']]
     out = OUT / f"fitb-{style}-{t['key']}-24s.mp4"
-    audio = vo_track(t)
+    audio = music_only()  # voice-over dropped on request; vo_track(t) brings it back
     assets = {}
     if style == 'pixel':
         from make_promos import card_dark
