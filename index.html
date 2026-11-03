@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FitB wall</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  video { width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+  #start { position: fixed; inset: 0; display: grid; place-items: center; color: #fff;
+           font: 600 28px/1.4 system-ui, sans-serif; background: #000; cursor: pointer; }
+  #start span { padding: 18px 32px; border: 2px solid #fff; border-radius: 999px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<video id="v" playsinline preload="auto"></video>
+<div id="start"><span>Tap to start the FitB wall</span></div>
+<script>
+  // Where the five part files live. Leave empty when this page sits in the same folder as them.
+  // For a public web host use the folder URL, e.g. 'https://example.com/fitb-wall/'.
+  const BASE = 'wall/';
+  const parts = [1, 2, 3, 4, 5].map(n => BASE + `fitb-wall-popout-landscape-part${n}.mp4`);
+
+  const v = document.getElementById('v');
+  const start = document.getElementById('start');
+  let i = 0;
+  const playNext = () => { v.src = parts[i]; i = (i + 1) % parts.length; v.play().catch(() => {}); };
+  v.addEventListener('ended', playNext);
+  v.addEventListener('error', () => setTimeout(playNext, 1000));
+  start.addEventListener('click', async () => {
+    start.classList.add('hidden');
+    try { await document.documentElement.requestFullscreen(); } catch (e) {}
+    v.muted = false;
+    playNext();
+  });
+</script>
+</body>
+</html>
