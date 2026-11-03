@@ -12,14 +12,16 @@ The 15-second ad set, the 30-second feature videos and the video walls stay on t
 
 ## Promo sets, one per style (24 s, music)
 
-Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, FitB music only (no voice-over). Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
+Five sets, one in the style of each uploaded promo, five themes each (tracking, trainers, gym, recovery, weight loss). 1920×1080, 24 s, each style with its own original music bed (no voice-over). Play them from the Pages site to hear them in the browser, e.g. https://g-sutherland-stack.github.io/fitb-ads/promos/plans/fitb-plans-weight-loss-24s.mp4
 
-| Style | Your reference video | Files |
-|---|---|---|
-| Plans (landscape pixel page) | plans_built_around_your_goal_original_landscape | [promos/plans](promos/plans) |
-| Pixel (portrait page, blurred sides) | weight_loss_guesswork_original_landscape | [promos/pixel](promos/pixel) |
-| Dark centred (receipt card) | weight_loss_guesswork_landscape | [promos/dark](promos/dark) |
-| Blobs (serif, organic shapes) | weight_loss_guesswork_original_2_landscape | [promos/blobs](promos/blobs) |
-| Kinetic (gold word, photo card) | weight_loss_guesswork_alt_landscape | [promos/kinetic](promos/kinetic) |
+| Style | Your reference video | Files | Music |
+|---|---|---|---|
+| Plans (landscape pixel page) | plans_built_around_your_goal_original_landscape | [promos/plans](promos/plans) | bright house, 122 bpm, C major |
+| Pixel (portrait page, blurred sides) | weight_loss_guesswork_original_landscape | [promos/pixel](promos/pixel) | chiptune, 150 bpm, E minor |
+| Dark centred (receipt card) | weight_loss_guesswork_landscape | [promos/dark](promos/dark) | warm minimal, 88 bpm, D minor |
+| Blobs (serif, organic shapes) | weight_loss_guesswork_original_2_landscape | [promos/blobs](promos/blobs) | playful marimba, 108 bpm swung, G major |
+| Kinetic (gold word, photo card) | weight_loss_guesswork_alt_landscape | [promos/kinetic](promos/kinetic) | driving, 126 bpm, F minor |
 
 `promos/build-sets.py` renders them (with `build-promos.py` beside it for the shared drawing code, Piper TTS and the `en-gb-southern_english_female-low` voice); the copy and app screens per theme are the `THEMES` list.
+
+The five music beds are in [music/](music) as WAV, composed in `music/build-tracks.py` (fully synthesised, free to use).
