@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FitB wall</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  video { width: 100vw; height: 100vh; object-fit: contain; background: #000; display: block; }
+  #start { position: fixed; inset: 0; display: grid; place-items: center; color: #fff;
+           font: 600 28px/1.4 system-ui, sans-serif; background: #000; cursor: pointer; }
+  #start span { padding: 18px 32px; border: 2px solid #fff; border-radius: 999px; }
+  #start.hidden { display: none; }
+  #status { position: fixed; left: 12px; bottom: 10px; color: #888; font: 13px system-ui, sans-serif;
+            opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #status.show { opacity: 1; }
+</style>
+</head>
+<body>
+<video id="v" playsinline preload="auto"></video>
+<div id="start"><span>Tap to start the FitB wall</span></div>
+<div id="status"></div>
+<script>
+  // The five part files, played in order and looped forever.
+  const BASE = '';
+  const parts = Array.from({length: 5}, (_, i) => BASE + `fitb-wall-loop-part${i}.mp4`);
+
+  const v = document.getElementById('v');
+  const start = document.getElementById('start');
+  const status = document.getElementById('status');
+  let i = 0, hideTimer;
+  const say = (msg, keep) => {
+    status.textContent = msg; status.classList.add('show'); clearTimeout(hideTimer);
+    if (!keep) hideTimer = setTimeout(() => status.classList.remove('show'), 4000);
+  };
+  const playNext = () => {
+    const n = i + 1;
+    v.src = parts[i]; i = (i + 1) % parts.length;
+    say(`Loading part ${n} of ${parts.length}…`, true);
+    v.play().then(() => say(`Part ${n} of ${parts.length}`)).catch(e => say(`Could not play part ${n}: ${e.message}`, true));
+  };
+  v.addEventListener('ended', playNext);
+  v.addEventListener('error', () => {
+    const code = v.error ? v.error.code : '?';
+    say(`Part failed to load (error ${code}). Trying the next one…`, true);
+    setTimeout(playNext, 1500);
+  });
+  v.addEventListener('stalled', () => say('Buffering…', true));
+  v.addEventListener('playing', () => say(`Part ${((i + parts.length - 1) % parts.length) + 1} of ${parts.length}`));
+  start.addEventListener('click', async () => {
+    start.classList.add('hidden');
+    try { await document.documentElement.requestFullscreen(); } catch (e) {}
+    v.muted = false;
+    playNext();
+  });
+  // Tap the playing video to pause / resume.
+  v.addEventListener('click', () => { if (v.paused) v.play(); else v.pause(); });
+</script>
+</body>
+</html>
