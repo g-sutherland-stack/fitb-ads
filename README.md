@@ -26,6 +26,6 @@ Five sets, one in the style of each uploaded promo, five themes each (tracking, 
 
 The five music beds are in [music/](music) as WAV, composed in `music/build-tracks.py` (fully synthesised, free to use).
 
-## The 54-minute wall loop
+## The 51-minute wall loop
 
 Three walls (the 1-50 clips, then the 50-100 clips in two walls), every member clip coming forward in full with its own sound, a promo after a random 3, 4 or 5 clips drawn from all 53 promos with sound (music-only, voice-over and the original three with audio), the same person never twice in a row. 1920×1080 master; the copy here is 720p in 5 parts under 100 MB. Play it on a loop at **https://g-sutherland-stack.github.io/fitb-ads/loop/** (tap once to start), or join the parts with ffmpeg and loop the file in VLC. `loop/build-loop.py` is the builder.
